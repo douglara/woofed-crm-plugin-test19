@@ -22,6 +22,8 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Download coverage artifact
+        id: download-coverage
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: coverage
@@ -65,11 +67,16 @@ jobs:
           bundle exec rubycritic --no-browser --format html --path tmp/rubycritic/pr-${{ steps.pr.outputs.number }}/full app lib
 
       - name: Copy coverage report
+        if: steps.download-coverage.outcome == 'success'
         run: |
           cp -r tmp/coverage tmp/rubycritic/pr-${{ steps.pr.outputs.number }}/coverage
 
       - name: Create index page
         run: |
+          COVERAGE_LINK=""
+          if [ -d "tmp/rubycritic/pr-${{ steps.pr.outputs.number }}/coverage" ]; then
+            COVERAGE_LINK="<li><a href=\"coverage/index.html\">Code Coverage Report</a></li>"
+          fi
           cat > tmp/rubycritic/pr-${{ steps.pr.outputs.number }}/index.html << EOF
           <!DOCTYPE html>
           <html>
@@ -77,7 +84,7 @@ jobs:
           <body>
             <h1>Code Quality Reports - PR #${{ steps.pr.outputs.number }}</h1>
             <ul>
-              <li><a href="coverage/index.html">Code Coverage Report</a></li>
+              $COVERAGE_LINK
               <li><a href="changed/overview.html">RubyCritic - Changed Files</a></li>
               <li><a href="full/overview.html">RubyCritic - Full Codebase</a></li>
             </ul>
@@ -96,19 +103,26 @@ jobs:
       - name: Comment PR with report links
         if: ${{ steps.pr.outputs.is_pr == 'true' }}
         uses: actions/github-script@v7
+        env:
+          COVERAGE_AVAILABLE: ${{ steps.download-coverage.outcome == 'success' }}
         with:
           script: |
             const prNumber = ${{ steps.pr.outputs.number }};
             const repoOwner = context.repo.owner;
             const repoName = context.repo.repo;
             const baseUrl = `https://${repoOwner}.github.io/${repoName}/rubycritic/pr-${prNumber}`;
+            const coverageAvailable = process.env.COVERAGE_AVAILABLE === 'true';
+
+            let coverageRow = '';
+            if (coverageAvailable) {
+              coverageRow = `| Code Coverage | [View Report](${baseUrl}/coverage/index.html) |\n`;
+            }
 
             const body = `## Code Quality Reports
 
             | Report | Link |
             |--------|------|
-            | Code Coverage | [View Report](${baseUrl}/coverage/index.html) |
-            | RubyCritic - Changed Files | [View Report](${baseUrl}/changed/overview.html) |
+            ${coverageRow}| RubyCritic - Changed Files | [View Report](${baseUrl}/changed/overview.html) |
             | RubyCritic - Full Codebase | [View Report](${baseUrl}/full/overview.html) |
             `;
 
