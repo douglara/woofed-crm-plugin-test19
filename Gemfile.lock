@@ -387,6 +387,7 @@ GEM
       net-smtp
     marcel (1.0.4)
     matrix (0.4.2)
+    memory_profiler (1.1.0)
     mini_magick (4.13.2)
     mini_mime (1.1.5)
     minitest (5.25.4)
@@ -631,7 +632,7 @@ GEM
     rack (3.1.11)
     rack-cors (2.0.2)
       rack (>= 2.0.0)
-    rack-mini-profiler (2.3.4)
+    rack-mini-profiler (4.0.1)
       rack (>= 1.2.0)
     rack-proxy (0.7.7)
       rack
@@ -924,6 +925,7 @@ DEPENDENCIES
   jwt (= 2.2.3)
   listen (~> 3.3)
   loofah (= 2.23.1)
+  memory_profiler
   money (= 6.19)
   motor-admin (= 0.4.20)
   neighbor
@@ -937,7 +939,7 @@ DEPENDENCIES
   pgvector
   puma (= 6.4.3)
   rack-cors
-  rack-mini-profiler (~> 2.0)
+  rack-mini-profiler (~> 4.0)
   rails (= 7.1.5.1)
   rails-i18n (~> 7.0.0)
   ransack (= 4.1.1)
