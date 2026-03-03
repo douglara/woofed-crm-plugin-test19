@@ -750,6 +750,7 @@ RSpec.describe Accounts::DealsController, type: :request do
           expect(deal_position1.reload.position).to eq(1)
           expect(deal_position3.reload.position).to eq(2)
           expect(deal_position2.reload.position).to eq(3)
+          expect(response.body).to be_empty
         end
 
         it 'moves deal above the reference card (direction: top)' do
@@ -765,6 +766,7 @@ RSpec.describe Accounts::DealsController, type: :request do
           expect(deal_position2.reload.position).to eq(1)
           expect(deal_position1.reload.position).to eq(2)
           expect(deal_position3.reload.position).to eq(3)
+          expect(response.body).to be_empty
         end
       end
 
@@ -785,6 +787,8 @@ RSpec.describe Accounts::DealsController, type: :request do
           expect(deal_position2.reload.stage_id).to eq(stage2.id)
           expect(deal_position2.reload.position).to eq(1)
           expect(deal_position1_stage2.reload.position).to eq(2)
+          expect(response.body).to include("stage-#{stage.id}-all-kaban-details")
+          expect(response.body).to include("stage-#{stage2.id}-all-kaban-details")
         end
 
         it 'moves deal to another stage above the reference card (direction: top)' do
@@ -800,6 +804,8 @@ RSpec.describe Accounts::DealsController, type: :request do
           expect(deal_position2.reload.stage_id).to eq(stage2.id)
           expect(deal_position2.reload.position).to eq(2)
           expect(deal_position1_stage2.reload.position).to eq(1)
+          expect(response.body).to include("stage-#{stage.id}-all-kaban-details")
+          expect(response.body).to include("stage-#{stage2.id}-all-kaban-details")
         end
       end
 
@@ -815,6 +821,7 @@ RSpec.describe Accounts::DealsController, type: :request do
           expect(deal_position1.reload.position).to eq(1)
           expect(deal_position2.reload.position).to eq(2)
           expect(deal_position3.reload.position).to eq(3)
+          expect(response.body).to be_empty
         end
 
         it 'moves deal to the top of the new stage when dropped on a different stage' do
@@ -833,6 +840,8 @@ RSpec.describe Accounts::DealsController, type: :request do
           expect(deal_position1_stage2.reload.position).to eq(1) # unchanged
           expect(deal_position1.reload.position).to eq(1) # gap closed in original stage
           expect(deal_position3.reload.position).to eq(2) # gap closed in original stage
+          expect(response.body).to include("stage-#{stage.id}-all-kaban-details")
+          expect(response.body).to include("stage-#{stage2.id}-all-kaban-details")
         end
       end
     end
