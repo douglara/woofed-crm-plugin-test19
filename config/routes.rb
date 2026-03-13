@@ -118,6 +118,7 @@ Rails.application.routes.draw do
         get :pipeline_summary
       end
     end
+    resource :advanced_filter, only: [:show]
   end
   if ENV.fetch('ENABLE_USER_SIGNUP', 'false') == 'true'
     devise_for :users, controllers: {
@@ -155,6 +156,14 @@ Rails.application.routes.draw do
       end
 
       resources :contacts, only: [:create] do
+      end
+    end
+  end
+
+  namespace :inertia do
+    resources :accounts, module: :accounts do
+      namespace :components do
+        get 'combobox', to: 'combobox#search'
       end
     end
   end

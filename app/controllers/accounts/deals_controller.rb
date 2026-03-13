@@ -181,6 +181,13 @@ class Accounts::DealsController < InternalController
 
   def drag_and_drop
     previous_stage_id = @deal.stage_id
+    @filter =
+      if params[:filter].is_a?(String)
+        params[:filter]
+      else
+        params[:filter]&.to_json
+      end
+
     Deal::DragAndDrop.new(
       @deal,
       stage_id: drag_and_drop_params.dig(:deal, :stage_id),

@@ -7,3 +7,16 @@ Ransack.configure do |config|
   # Default is true (do not raise error on unknown conditions).
   config.ignore_unknown_conditions = false
 end
+
+ActsAsTaggableOn::Tag.class_eval do
+  def self.ransackable_attributes(auth_object = nil)
+    %w[
+      name
+      id
+    ]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[]
+  end
+end
