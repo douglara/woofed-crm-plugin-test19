@@ -70,7 +70,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_14_100000) do
   create_table "agent_plugin_builders", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
-    t.text "description", null: false
+    t.string "name", default: "", null: false
+    t.text "description"
     t.string "status", default: "pending", null: false
     t.string "repo_url"
     t.string "branch_name"

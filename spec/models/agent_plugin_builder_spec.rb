@@ -1,3 +1,30 @@
+# == Schema Information
+#
+# Table name: agent_plugin_builders
+#
+#  id            :bigint           not null, primary key
+#  branch_name   :string
+#  description   :text
+#  error_message :text
+#  logs          :text
+#  name          :string           default(""), not null
+#  repo_url      :string
+#  status        :string           default("pending"), not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  account_id    :bigint           not null
+#  user_id       :bigint           not null
+#
+# Indexes
+#
+#  index_agent_plugin_builders_on_account_id  (account_id)
+#  index_agent_plugin_builders_on_user_id     (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (user_id => users.id)
+#
 require 'rails_helper'
 
 RSpec.describe AgentPluginBuilder, type: :model do

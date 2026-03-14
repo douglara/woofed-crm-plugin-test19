@@ -117,9 +117,7 @@ class Account < ApplicationRecord
     Apps::AiAssistent.all
   end
 
-  def agent_plugin_builders
-    AgentPluginBuilder.all
-  end
+  has_many :agent_plugin_builders, dependent: :destroy
 
   def site_url=(url)
     super(normalize_url(url))

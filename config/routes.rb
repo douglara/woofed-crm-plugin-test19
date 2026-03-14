@@ -29,6 +29,7 @@ Rails.application.routes.draw do
       resource :deals, only: %i[edit update], module: :settings do
         resources :deal_lost_reasons, except: [:show], module: :deals
       end
+      resources :agent_plugin_builders, only: %i[index new create show destroy], module: :settings
     end
 
     resources :webhooks, module: :settings do

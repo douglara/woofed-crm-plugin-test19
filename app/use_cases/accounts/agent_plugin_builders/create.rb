@@ -1,10 +1,11 @@
 class Accounts::AgentPluginBuilders::Create
   UPSTREAM_REPO = 'https://github.com/douglara/woofed-crm.git'
 
-  def self.call(account, user, description)
+  def self.call(account, user, name, description)
     agent_plugin_builder = AgentPluginBuilder.new(
       account: account,
       user: user,
+      name: name,
       description: description,
       status: :pending
     )
