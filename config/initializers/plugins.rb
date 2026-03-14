@@ -8,13 +8,12 @@ Rails.application.config.after_initialize do
 
   Plugins::PluginLoader.load_all!
 
-  # Draw plugin routes into the main router.
+  # Load plugin locales into I18n.
   Plugins::PluginLoader.loaded_plugins.each do |plugin|
-    routes_file = plugin.path.join("config", "routes.rb")
-    next unless routes_file.exist?
-
-    Rails.application.routes.draw do
-      instance_eval(File.read(routes_file))
+    locale_dir = plugin.path.join("config", "locales")
+    if locale_dir.exist?
+      I18n.load_path += Dir[locale_dir.join("**", "*.{rb,yml}")]
     end
   end
+  I18n.reload!
 end

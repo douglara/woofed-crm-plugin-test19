@@ -45,6 +45,15 @@ module WoofedCrm
       config.paths["app/helpers"].unshift(build_app.join("helpers").to_s)
     end
 
+    # Plugin system: add plugin migration paths.
+    plugins_dir = root.join("plugins")
+    if plugins_dir.exist?
+      plugins_dir.children.select(&:directory?).each do |plugin_dir|
+        migrate_dir = plugin_dir.join("db", "migrate")
+        config.paths["db/migrate"] << migrate_dir.to_s if migrate_dir.exist?
+      end
+    end
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files
