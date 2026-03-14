@@ -12,22 +12,29 @@ class Accounts::AgentPluginBuilders::Build
 
   def initialize(feature_request)
     @feature_request = feature_request
-    @branch_name = generate_branch_name
+    @plugin_slug = generate_plugin_slug
+    @repo_name = "woofed-crm-plugin-#{@plugin_slug}"
     @work_path = nil
   end
 
   def call
-    @feature_request.update(status: :processing, branch_name: @branch_name)
-    log("Starting AI feature build...")
+    @feature_request.update(status: :processing)
+    log("Starting AI plugin build...")
 
     validate_github_token!
-    fork_repo_url = fork_repository
-    @work_path = clone_fork(fork_repo_url)
-    create_branch
+    repo_url = create_plugin_repo
+    @work_path = clone_upstream
+    set_remote_origin(repo_url)
+    push_base_branch
     run_opencode
     commit_and_push
-    @feature_request.update(status: :completed, repo_url: fork_repo_url)
-    log("Feature build completed successfully! Repo: #{fork_repo_url}, Branch: #{@branch_name}")
+    log("Plugin build completed! Repo: #{repo_url}")
+
+    run_opencode_convert_to_plugin
+    commit_plugin_changes
+    push_plugin_to_master
+    @feature_request.update(status: :completed, repo_url: repo_url)
+    log("Plugin conversion completed! Plugin available at master branch.")
 
     { ok: @feature_request }
   rescue StandardError => e
@@ -42,67 +49,58 @@ class Accounts::AgentPluginBuilders::Build
 
   def validate_github_token!
     unless github_token.present?
-      raise "GITHUB_TOKEN environment variable is required. Set it with a personal access token that has 'repo' and 'delete_repo' scopes."
+      raise "GITHUB_TOKEN environment variable is required. Set it with a personal access token that has 'repo' scope."
     end
   end
 
-  def fork_repository
-    log("Forking upstream repository...")
+  def create_plugin_repo
+    log("Creating plugin repository: #{@repo_name}...")
 
     conn = faraday_connection
-    response = conn.post('/repos/douglara/woofed-crm/forks') do |req|
-      req.body = { name: fork_repo_name, default_branch_only: false }.to_json
+    response = conn.post('/user/repos') do |req|
+      req.body = { name: @repo_name, private: false }.to_json
     end
 
-    unless [200, 202].include?(response.status)
-      raise "Failed to fork repository: #{response.status} - #{response.body}"
+    unless [200, 201].include?(response.status)
+      raise "Failed to create repository: #{response.status} - #{response.body}"
     end
 
     result = JSON.parse(response.body)
-    fork_url = result['clone_url']
-    log("Fork created: #{fork_url}")
+    repo_url = result['clone_url']
+    log("Repository created: #{repo_url}")
 
-    wait_for_fork(result['full_name'])
-
-    fork_url
+    repo_url
   end
 
-  def wait_for_fork(full_name)
-    log("Waiting for fork to be ready...")
-    conn = faraday_connection
+  def clone_upstream
+    work_path = File.join(WORK_DIR, @repo_name)
+    FileUtils.mkdir_p(File.dirname(work_path))
 
-    10.times do
-      sleep 3
-      response = conn.get("/repos/#{full_name}")
-      if response.status == 200
-        log("Fork is ready.")
-        return
-      end
-    end
-
-    raise "Fork did not become ready in time"
-  end
-
-  def clone_fork(fork_url)
-    work_path = File.join(WORK_DIR, @branch_name)
-    FileUtils.mkdir_p(work_path)
-
-    log("Cloning fork...")
-    run_command("git -c http.extraHeader=#{Shellwords.escape("Authorization: Bearer #{github_token}")} clone #{Shellwords.escape(fork_url)} #{Shellwords.escape(work_path)}")
+    log("Cloning woofed-crm (branch: plugins-test5)...")
+    authenticated_url = UPSTREAM_REPO.sub('https://', "https://x-access-token:#{github_token}@")
+    env = { 'GIT_TERMINAL_PROMPT' => '0' }
+    run_command_arr(env, ['git', 'clone', '--branch', 'plugins-test5', authenticated_url, work_path])
     log("Clone complete.")
 
     work_path
   end
 
-  def create_branch
-    log("Creating branch: #{@branch_name}")
-    run_git_command("checkout -b #{Shellwords.escape(@branch_name)}")
+  def set_remote_origin(repo_url)
+    authenticated_url = repo_url.sub('https://', "https://x-access-token:#{github_token}@")
+    log("Setting origin to plugin repository...")
+    run_git_command("remote set-url origin #{authenticated_url}")
+  end
+
+  def push_base_branch
+    log("Pushing development base to build-feature...")
+    run_git_command("push origin HEAD:build-feature")
+    log("Base push complete.")
   end
 
   OPENCODE_TIMEOUT = 2.hours.to_i
 
   def run_opencode
-    log("Running OpenCode AI to develop the feature...")
+    log("Running OpenCode AI to develop the plugin...")
     log("Description: #{@feature_request.description}")
 
     escaped_description = Shellwords.escape(@feature_request.description)
@@ -111,6 +109,64 @@ class Accounts::AgentPluginBuilders::Build
     output = run_streaming_command(cmd, chdir: @work_path, timeout: OPENCODE_TIMEOUT)
     log("OpenCode finished.")
     log("Output: #{output.truncate(5000)}")
+  end
+
+  def run_opencode_convert_to_plugin
+    log("Running OpenCode to convert implementation to plugin...")
+    log("Plugin name: #{@plugin_slug}")
+
+    prompt = build_plugin_conversion_prompt
+    cmd = "opencode run #{Shellwords.escape(prompt)}"
+
+    output = run_streaming_command(cmd, chdir: @work_path, timeout: OPENCODE_TIMEOUT)
+    log("OpenCode plugin conversion finished.")
+    log("Output: #{output.truncate(5000)}")
+  end
+
+  def build_plugin_conversion_prompt
+    plugin_guide = Rails.root.join('docs/plugins.md').read
+
+    <<~PROMPT
+      Convert the implementation from the last git commit into a WoofedCRM plugin.
+
+      Plugin name: #{@plugin_slug}
+      Plugin folder: storage/plugins/#{@plugin_slug}/
+
+      Key requirements:
+      - Create storage/plugins/#{@plugin_slug}/plugin.rb with manifest (name: "#{@plugin_slug}", version: "1.0.0")
+      - For each file modified inside app/ by the last commit: create a FilePatch file at the same relative path inside storage/plugins/#{@plugin_slug}/app/ using the FilePatch DSL
+      - For each new file added inside app/ by the last commit: copy it as-is to storage/plugins/#{@plugin_slug}/app/ at the same relative path
+      - Move any ActiveRecord macros (has_many, belongs_to, validates, scope) into ActiveSupport::Concern modules in new files inside the plugin
+      - Create a full test suite under storage/plugins/#{@plugin_slug}/spec/
+      - Add routes to storage/plugins/#{@plugin_slug}/config/routes.rb if needed
+      - Add migrations to storage/plugins/#{@plugin_slug}/db/migrate/ if needed
+      - Do NOT modify any files inside app/ — all modifications must go through the FilePatch DSL
+      - After creating the plugin files, revert any direct changes made to app/ files by the last commit (they are now in the plugin)
+
+      ## Plugin Authoring Guide (follow this exactly)
+
+      #{plugin_guide}
+    PROMPT
+  end
+
+  def commit_plugin_changes
+    log("Committing plugin files...")
+    run_git_command("add -A")
+
+    status_output = run_git_command("status --porcelain")
+    if status_output.strip.empty?
+      raise "OpenCode did not create any plugin files in storage/plugins/#{@plugin_slug}"
+    end
+
+    commit_message = "feat: add #{@plugin_slug} plugin"
+    run_git_command("commit -m #{Shellwords.escape(commit_message)}")
+    log("Plugin committed.")
+  end
+
+  def push_plugin_to_master
+    log("Pushing plugin folder to master branch...")
+    run_git_command("subtree push --prefix=storage/plugins/#{@plugin_slug} origin master")
+    log("Plugin pushed to master.")
   end
 
   def commit_and_push
@@ -126,26 +182,24 @@ class Accounts::AgentPluginBuilders::Build
     commit_message = "feat: #{@feature_request.description.truncate(72)}"
     run_git_command("commit -m #{Shellwords.escape(commit_message)}")
 
-    log("Pushing to remote branch #{@branch_name}...")
-    run_git_command("push origin #{Shellwords.escape(@branch_name)}")
+    log("Pushing to origin build-feature...")
+    run_git_command("push origin HEAD:build-feature")
     log("Push complete.")
   end
 
-  def run_command(cmd)
-    stdout, stderr, status = Open3.capture3(cmd)
+  def run_command_arr(env, args, chdir: nil)
+    opts = chdir ? { chdir: chdir } : {}
+    stdout, stderr, status = Open3.capture3(env, *args, **opts)
     unless status.success?
-      raise "Command failed: #{cmd}\nstderr: #{stderr}\nstdout: #{stdout}"
+      raise "Command failed: #{args.join(' ')}\nstderr: #{stderr}\nstdout: #{stdout}"
     end
     stdout
   end
 
-  def run_git_command(git_args)
-    cmd = "git -c http.extraHeader=#{Shellwords.escape("Authorization: Bearer #{github_token}")} #{git_args}"
-    stdout, stderr, status = Open3.capture3(cmd, chdir: @work_path)
-    unless status.success?
-      raise "Git command failed: git #{git_args}\nstderr: #{stderr}\nstdout: #{stdout}"
-    end
-    stdout
+  def run_git_command(git_args_str)
+    env = { 'GIT_TERMINAL_PROMPT' => '0' }
+    args = ['git'] + git_args_str.shellsplit
+    run_command_arr(env, args, chdir: @work_path)
   end
 
   def run_streaming_command(cmd, chdir:, timeout: OPENCODE_TIMEOUT)
@@ -193,31 +247,16 @@ class Accounts::AgentPluginBuilders::Build
     end
   end
 
-  def generate_branch_name
-    slug = @feature_request.description
+  def generate_plugin_slug
+    @feature_request.name
       .downcase
       .gsub(/[^a-z0-9\s]/, '')
       .split
-      .first(5)
       .join('-')
-    "ai-feature/#{slug}-#{SecureRandom.hex(4)}"
-  end
-
-  def fork_repo_name
-    "woofed-crm-ai-#{SecureRandom.hex(4)}"
   end
 
   def github_token
     ENV.fetch('GITHUB_TOKEN', nil)
-  end
-
-  def github_username
-    @github_username ||= begin
-      conn = faraday_connection
-      response = conn.get('/user')
-      raise "Failed to get GitHub user: #{response.status}" unless response.status == 200
-      JSON.parse(response.body)['login']
-    end
   end
 
   def faraday_connection
