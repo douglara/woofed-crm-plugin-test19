@@ -39,4 +39,7 @@ RUN bundle exec rake assets:precompile
 # Install node dependences
 RUN npm i -g flat
 
-CMD bundle exec good_job
+RUN chmod +x /app/bin/boot
+
+ENTRYPOINT ["bin/boot"]
+CMD ["bundle", "exec", "good_job"]

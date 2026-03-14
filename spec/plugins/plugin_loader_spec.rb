@@ -25,13 +25,13 @@ RSpec.describe Plugins::PluginLoader do
   end
 
   describe ".load_all!" do
-    it "discovers plugins from the plugins/ directory" do
-      create_file("plugins/example/plugin.rb", <<~RUBY)
+    it "discovers plugins from the storage/plugins/ directory" do
+      create_file("storage/plugins/example/plugin.rb", <<~RUBY)
         name "example"
         version "1.0.0"
         priority 10
       RUBY
-      create_file("plugins/example/app/models/dummy.rb", "class Dummy; end")
+      create_file("storage/plugins/example/app/models/dummy.rb", "class Dummy; end")
 
       described_class.load_all!(root: tmpdir)
 
@@ -43,17 +43,17 @@ RSpec.describe Plugins::PluginLoader do
     end
 
     it "sorts plugins by priority" do
-      create_file("plugins/beta/plugin.rb", <<~RUBY)
+      create_file("storage/plugins/beta/plugin.rb", <<~RUBY)
         name "beta"
         priority 20
       RUBY
-      create_file("plugins/beta/app/models/dummy.rb", "class Dummy; end")
+      create_file("storage/plugins/beta/app/models/dummy.rb", "class Dummy; end")
 
-      create_file("plugins/alpha/plugin.rb", <<~RUBY)
+      create_file("storage/plugins/alpha/plugin.rb", <<~RUBY)
         name "alpha"
         priority 10
       RUBY
-      create_file("plugins/alpha/app/models/dummy2.rb", "class Dummy2; end")
+      create_file("storage/plugins/alpha/app/models/dummy2.rb", "class Dummy2; end")
 
       described_class.load_all!(root: tmpdir)
 
@@ -62,21 +62,21 @@ RSpec.describe Plugins::PluginLoader do
     end
 
     it "skips folders without plugin.rb" do
-      create_file("plugins/no_manifest/app/models/thing.rb", "class Thing; end")
+      create_file("storage/plugins/no_manifest/app/models/thing.rb", "class Thing; end")
 
       described_class.load_all!(root: tmpdir)
 
       expect(described_class.loaded_plugins).to be_empty
     end
 
-    it "handles missing plugins/ directory gracefully" do
+    it "handles missing storage/plugins/ directory gracefully" do
       expect { described_class.load_all!(root: tmpdir) }.not_to raise_error
       expect(described_class.loaded_plugins).to be_empty
     end
 
     it "defaults version to 0.0.0 and priority to 0" do
-      create_file("plugins/minimal/plugin.rb", 'name "minimal"')
-      create_file("plugins/minimal/app/models/dummy.rb", "class Dummy; end")
+      create_file("storage/plugins/minimal/plugin.rb", 'name "minimal"')
+      create_file("storage/plugins/minimal/app/models/dummy.rb", "class Dummy; end")
 
       described_class.load_all!(root: tmpdir)
 
@@ -88,8 +88,8 @@ RSpec.describe Plugins::PluginLoader do
 
   describe ".reset!" do
     it "clears loaded plugins" do
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/dummy.rb", "class Dummy; end")
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/dummy.rb", "class Dummy; end")
 
       described_class.load_all!(root: tmpdir)
       expect(described_class.loaded_plugins).not_to be_empty

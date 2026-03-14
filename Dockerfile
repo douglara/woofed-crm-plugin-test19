@@ -44,6 +44,8 @@ RUN npm i -g flat
 RUN echo "Waiting for postgres to become ready...."
 RUN sleep 10
 
+RUN chmod +x /app/bin/boot
 RUN chmod +x /app/bin/easyinstall
 
-CMD bundle exec rails db:create; bundle exec rails db:migrate; bundle exec puma -C config/puma.rb
+ENTRYPOINT ["bin/boot"]
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]

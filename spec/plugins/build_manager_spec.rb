@@ -26,8 +26,8 @@ RSpec.describe Plugins::BuildManager do
   describe "#sync!" do
     context "with a new file (no original in app/)" do
       it "copies the file as-is to storage/build/" do
-        create_file("plugins/example/plugin.rb", 'name "example"')
-        create_file("plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
+        create_file("storage/plugins/example/plugin.rb", 'name "example"')
+        create_file("storage/plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
 
         manager.sync!
 
@@ -45,8 +45,8 @@ RSpec.describe Plugins::BuildManager do
           end
         RUBY
 
-        create_file("plugins/example/plugin.rb", 'name "example"')
-        create_file("plugins/example/app/models/contact.rb", <<~RUBY)
+        create_file("storage/plugins/example/plugin.rb", 'name "example"')
+        create_file("storage/plugins/example/app/models/contact.rb", <<~RUBY)
           Plugins::FilePatch.define target: "app/models/contact.rb" do
             after_line containing: "class Contact < ApplicationRecord" do
               "  include MyExtension"
@@ -66,8 +66,8 @@ RSpec.describe Plugins::BuildManager do
       it "does not modify the original file" do
         original_content = "class Contact\nend\n"
         create_file("app/models/contact.rb", original_content)
-        create_file("plugins/example/plugin.rb", 'name "example"')
-        create_file("plugins/example/app/models/contact.rb", <<~RUBY)
+        create_file("storage/plugins/example/plugin.rb", 'name "example"')
+        create_file("storage/plugins/example/app/models/contact.rb", <<~RUBY)
           Plugins::FilePatch.define target: "app/models/contact.rb" do
             after_line containing: "class Contact" do
               "  include MyExtension"
@@ -89,8 +89,8 @@ RSpec.describe Plugins::BuildManager do
           end
         RUBY
 
-        create_file("plugins/alpha/plugin.rb", 'name "alpha"')
-        create_file("plugins/alpha/app/models/contact.rb", <<~RUBY)
+        create_file("storage/plugins/alpha/plugin.rb", 'name "alpha"')
+        create_file("storage/plugins/alpha/app/models/contact.rb", <<~RUBY)
           Plugins::FilePatch.define target: "app/models/contact.rb", priority: 10 do
             after_line containing: "class Contact < ApplicationRecord" do
               "  include Alpha"
@@ -98,8 +98,8 @@ RSpec.describe Plugins::BuildManager do
           end
         RUBY
 
-        create_file("plugins/beta/plugin.rb", 'name "beta"')
-        create_file("plugins/beta/app/models/contact.rb", <<~RUBY)
+        create_file("storage/plugins/beta/plugin.rb", 'name "beta"')
+        create_file("storage/plugins/beta/app/models/contact.rb", <<~RUBY)
           Plugins::FilePatch.define target: "app/models/contact.rb", priority: 20 do
             after_line containing: "include Alpha" do
               "  include Beta"
@@ -124,8 +124,8 @@ RSpec.describe Plugins::BuildManager do
 
   describe "#rebuild!" do
     it "wipes and recreates storage/build/" do
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
 
       manager.sync!
       expect(tmpdir.join("storage/build/app/models/new_model.rb")).to exist
@@ -144,14 +144,14 @@ RSpec.describe Plugins::BuildManager do
 
   describe "#remove_orphans!" do
     it "removes files from storage/build/ when plugin is gone" do
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
 
       manager.sync!
       expect(tmpdir.join("storage/build/app/models/new_model.rb")).to exist
 
       # Remove the plugin
-      FileUtils.rm_rf(tmpdir.join("plugins/example"))
+      FileUtils.rm_rf(tmpdir.join("storage/plugins/example"))
 
       manager.sync!
       expect(tmpdir.join("storage/build/app/models/new_model.rb")).not_to exist
@@ -165,8 +165,8 @@ RSpec.describe Plugins::BuildManager do
         end
       RUBY
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/contact.rb", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/contact.rb", <<~RUBY)
         Plugins::FilePatch.define target: "app/models/contact.rb" do
           after_line containing: "class Contact" do
             "  include MyExtension"
@@ -187,9 +187,9 @@ RSpec.describe Plugins::BuildManager do
 
   describe "#status" do
     it "lists all files in storage/build/" do
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
-      create_file("plugins/example/app/models/another.rb", "class Another\nend\n")
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
+      create_file("storage/plugins/example/app/models/another.rb", "class Another\nend\n")
 
       manager.sync!
 
@@ -205,8 +205,8 @@ RSpec.describe Plugins::BuildManager do
 
   describe "incremental build" do
     it "does not rewrite unchanged files" do
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/new_model.rb", "class NewModel\nend\n")
 
       manager.sync!
 
@@ -230,8 +230,8 @@ RSpec.describe Plugins::BuildManager do
         </div>
       ERB
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/views/users/show.html.erb", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/views/users/show.html.erb", <<~RUBY)
         Plugins::FilePatch.define target: "app/views/users/show.html.erb" do
           replace_block from: "<%# plugin:example:start %>",
                         to: "<%# plugin:example:end %>" do
@@ -256,8 +256,8 @@ RSpec.describe Plugins::BuildManager do
         export default function UserProfile() { return <div /> }
       JSX
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/javascript/pages/UserProfile.jsx", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/javascript/pages/UserProfile.jsx", <<~RUBY)
         Plugins::FilePatch.define target: "app/javascript/pages/UserProfile.jsx" do
           after_line containing: 'import React from "react"' do
             'import Badge from "@/components/Badge"'

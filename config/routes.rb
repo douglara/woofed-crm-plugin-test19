@@ -196,7 +196,7 @@ Rails.application.routes.draw do
   get 'webmanifest' => 'pwa#manifest'
 
   # Draw plugin routes
-  Dir[Rails.root.join("plugins/*/config/routes.rb")].sort.each do |route_file|
+  Dir[Rails.root.join("storage/plugins/*/config/routes.rb")].sort.each do |route_file|
     instance_eval(File.read(route_file))
   end
 end

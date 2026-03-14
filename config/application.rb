@@ -46,7 +46,7 @@ module WoofedCrm
     end
 
     # Plugin system: add plugin migration paths.
-    plugins_dir = root.join("plugins")
+    plugins_dir = root.join("storage", "plugins")
     if plugins_dir.exist?
       plugins_dir.children.select(&:directory?).each do |plugin_dir|
         migrate_dir = plugin_dir.join("db", "migrate")

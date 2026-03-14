@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Plugins
-  # Discovers and loads plugins from the plugins/ directory.
+  # Discovers and loads plugins from the storage/plugins/ directory.
   #
-  # Each plugin has a manifest at plugins/<name>/plugin.rb that defines
+  # Each plugin has a manifest at storage/plugins/<name>/plugin.rb that defines
   # name, version, and priority.
   class PluginLoader
     PluginManifest = Struct.new(:name, :version, :priority, :path, keyword_init: true)
@@ -28,7 +28,7 @@ module Plugins
       private
 
       def discover_plugins(root)
-        plugins_dir = root.join("plugins")
+        plugins_dir = root.join("storage", "plugins")
         return unless plugins_dir.exist?
 
         plugins_dir.children.select(&:directory?).sort.each do |plugin_dir|

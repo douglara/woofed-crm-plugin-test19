@@ -27,9 +27,10 @@ rails plugins:rebuild
 ## Folder structure
 
 ```
-plugins/
+storage/plugins/
 └── <plugin_name>/
     ├── plugin.rb                    ← plugin manifest (required)
+    ├── Gemfile                      ← plugin gem dependencies (optional)
     ├── app/                         ← all plugin files live here
     │   ├── models/
     │   │   ├── contact.rb           ← PATCH: same path as app/models/contact.rb
@@ -67,7 +68,7 @@ plugins/
 Every plugin must have a `plugin.rb` at its root with at least a `name`:
 
 ```ruby
-# plugins/my_plugin/plugin.rb
+# storage/plugins/my_plugin/plugin.rb
 name    "my_plugin"
 version "1.0.0"
 priority 10
@@ -86,6 +87,22 @@ priority 10
 When multiple plugins patch the same file, priority determines the order.
 Plugin with priority `10` runs before priority `20`. A later plugin can use
 lines inserted by an earlier plugin as anchors.
+
+---
+
+## Plugin Gemfile (optional)
+
+Plugins can declare their own gem dependencies in `storage/plugins/<name>/Gemfile`. The main
+`Gemfile` automatically evaluates all plugin Gemfiles via `eval_gemfile`. On boot,
+`bundle install` runs before the Rails environment loads, ensuring new gems are
+available.
+
+```ruby
+# storage/plugins/my_plugin/Gemfile
+gem "some_gem", "~> 1.0"
+```
+
+The `Gemfile` uses standard Bundler syntax — groups, platforms, `source`, etc. all work.
 
 ---
 
@@ -125,7 +142,7 @@ There is no `patches/` folder. The file path inside the plugin is the signal:
 ### Example: patch file
 
 ```
-plugins/example/app/models/contact.rb       ← PATCH (app/models/contact.rb exists)
+storage/plugins/example/app/models/contact.rb       ← PATCH (app/models/contact.rb exists)
 ```
 
 Content is `FilePatch` DSL, not a Ruby class:
@@ -141,7 +158,7 @@ end
 ### Example: new file
 
 ```
-plugins/example/app/models/contact_extension.rb  ← NEW FILE (no match in app/)
+storage/plugins/example/app/models/contact_extension.rb  ← NEW FILE (no match in app/)
 ```
 
 Content is a normal Ruby module:
@@ -341,7 +358,7 @@ pattern ensures macros run correctly when the patched class loads.
 
 ### Full example
 
-**New file** — the Concern (`plugins/example/app/models/contact_extension.rb`):
+**New file** — the Concern (`storage/plugins/example/app/models/contact_extension.rb`):
 
 ```ruby
 module Plugins
@@ -363,7 +380,7 @@ module Plugins
 end
 ```
 
-**Patch file** — injects the include (`plugins/example/app/models/contact.rb`):
+**Patch file** — injects the include (`storage/plugins/example/app/models/contact.rb`):
 
 ```ruby
 Plugins::FilePatch.define target: "app/models/contact.rb" do
@@ -385,7 +402,7 @@ runs first.
 Plugin `alpha` (priority 10) adds an import:
 
 ```ruby
-# plugins/alpha/app/javascript/pages/UserProfile.jsx
+# storage/storage/plugins/alpha/app/javascript/pages/UserProfile.jsx
 Plugins::FilePatch.define target: "app/javascript/pages/UserProfile.jsx",
                            priority: 10 do
   after_line containing: 'import Avatar from "@/components/Avatar"' do
@@ -397,7 +414,7 @@ end
 Plugin `beta` (priority 20) uses the line inserted by `alpha` as its anchor:
 
 ```ruby
-# plugins/beta/app/javascript/pages/UserProfile.jsx
+# storage/storage/plugins/beta/app/javascript/pages/UserProfile.jsx
 Plugins::FilePatch.define target: "app/javascript/pages/UserProfile.jsx",
                            priority: 20 do
   after_line containing: 'import AlphaBadge from "@/components/AlphaBadge"' do
@@ -412,11 +429,11 @@ This only works because `beta` runs after `alpha` (priority 20 > 10).
 
 ## Routes
 
-Plugins can define routes in `plugins/<name>/config/routes.rb`. These are
+Plugins can define routes in `storage/plugins/<name>/config/routes.rb`. These are
 automatically loaded and drawn into the main Rails router on boot.
 
 ```ruby
-# plugins/example/config/routes.rb
+# storage/plugins/example/config/routes.rb
 namespace :example do
   resources :widgets, only: [:index, :show]
 end
@@ -432,7 +449,7 @@ inside the Rails router draw block.
 > **This section is a mandatory instruction for any AI generating plugin code.**
 >
 > Every plugin you create **must** ship with a complete test suite under
-> `plugins/<plugin_name>/spec/`. Tests are not optional and must all pass before the
+> `storage/plugins/<plugin_name>/spec/`. Tests are not optional and must all pass before the
 > plugin is considered complete.
 
 ### Ruby — RSpec + FactoryBot
@@ -442,7 +459,7 @@ Cover every model, every Concern (tested on the host model), every controller
 that the original in `app/` was not modified).
 
 ```ruby
-# plugins/example/spec/patches/contact_patch_spec.rb
+# storage/plugins/example/spec/patches/contact_patch_spec.rb
 require "rails_helper"
 
 RSpec.describe "Contact patch" do
@@ -452,7 +469,7 @@ RSpec.describe "Contact patch" do
   after  { Plugins::FilePatch.clear_registry! }
 
   it "adds the include line" do
-    load Rails.root.join("plugins/example/app/models/contact.rb")
+    load Rails.root.join("storage/storage/plugins/example/app/models/contact.rb")
     result = Plugins::FilePatch.apply("app/models/contact.rb", original)
 
     expect(result).to include("include Plugins::Example::ContactExtension")
@@ -470,7 +487,7 @@ end
 Cover every React component:
 
 ```bash
-yarn vitest plugins/<plugin_name>/spec/javascript/
+yarn vitest storage/plugins/<plugin_name>/spec/javascript/
 ```
 
 ### Factories
@@ -478,7 +495,7 @@ yarn vitest plugins/<plugin_name>/spec/javascript/
 One FactoryBot factory per model defined by the plugin:
 
 ```ruby
-# plugins/example/spec/factories/example_records.rb
+# storage/plugins/example/spec/factories/example_records.rb
 FactoryBot.define do
   factory :example_record do
     contact
@@ -492,13 +509,29 @@ end
 Tests must be runnable in isolation:
 
 ```bash
-bundle exec rspec plugins/<plugin_name>/spec/
-yarn vitest plugins/<plugin_name>/spec/javascript/
+bundle exec rspec storage/plugins/<plugin_name>/spec/
+yarn vitest storage/plugins/<plugin_name>/spec/javascript/
 ```
 
 ---
 
 ## Rake tasks reference
+
+### `rails plugins:boot`
+
+Full plugin boot sequence. This is what runs on every application start:
+1. `bundle install` (shell level — before rake) — installs gems from plugin `Gemfile`s
+2. `plugins:rebuild` — wipes and rebuilds `storage/build/`
+3. `db:prepare` — creates the database if needed and runs all pending migrations (including plugin migrations)
+4. `yarn install` + `assets:precompile` (production only, if JS/CSS plugin files exist)
+
+```bash
+$ rails plugins:boot
+[plugins:boot] Rebuilding storage/build/...
+[plugins:boot] Build complete. 3 file(s) in storage/build/
+[plugins:boot] Running db:prepare (create + migrate)...
+[plugins:boot] Done.
+```
 
 ### `rails plugins:rebuild`
 
@@ -541,21 +574,55 @@ Files in storage/build/ (3):
 
 ---
 
+## Installing and removing plugins
+
+### `rails plugins:install[url]`
+
+Install a plugin from a public GitHub repository. The task clones the repo into
+`plugins/`, validates it has a `plugin.rb` manifest, runs `plugins:boot` (rebuild +
+migrate + assets), and restarts the application.
+
+```bash
+$ rails plugins:install[https://github.com/user/my-plugin]
+[plugins:install] Cloning https://github.com/user/my-plugin into storage/plugins/my-plugin...
+[plugins:install] Plugin 'my-plugin' cloned successfully.
+[plugins:install] Running boot to activate plugin...
+[plugins:install] Done! Plugin 'my-plugin' is now installed and active.
+```
+
+### `rails plugins:uninstall[name]`
+
+Remove an installed plugin by name. Deletes the plugin folder, rebuilds `storage/build/`,
+and restarts the application. Orphaned files are cleaned up automatically.
+
+```bash
+$ rails plugins:uninstall[my-plugin]
+[plugins:uninstall] Removing plugin 'my-plugin'...
+[plugins:uninstall] Rebuilding without plugin...
+[plugins:uninstall] Done! Plugin 'my-plugin' has been removed.
+```
+
+> **Note:** `uninstall` does **not** rollback plugin migrations. If the plugin created
+> database tables, you may need to drop them manually or write a migration.
+
+---
+
 ## Checklist — creating a new plugin
 
 ```
-[ ] Create plugins/<n>/plugin.rb with manifest (name, version, priority)
+[ ] Create storage/plugins/<n>/plugin.rb with manifest (name, version, priority)
+[ ] Add Gemfile if the plugin needs extra gems (storage/plugins/<n>/Gemfile)
 [ ] For each existing app/ file to extend:
-    [ ] Create plugins/<n>/app/<same/relative/path> with FilePatch DSL
+    [ ] Create storage/plugins/<n>/app/<same/relative/path> with FilePatch DSL
 [ ] For each new file the plugin needs:
-    [ ] Create plugins/<n>/app/<new/path> with normal content
-[ ] Create plugins/<n>/spec/ with full test suite
-[ ] Add migration if new tables are needed (plugins/<n>/db/migrate/)
-[ ] Add routes if new endpoints are needed (plugins/<n>/config/routes.rb)
-[ ] Run rails plugins:rebuild — verify storage/build/ is generated correctly
+    [ ] Create storage/plugins/<n>/app/<new/path> with normal content
+[ ] Create storage/plugins/<n>/spec/ with full test suite
+[ ] Add migration if new tables are needed (storage/plugins/<n>/db/migrate/)
+[ ] Add routes if new endpoints are needed (storage/plugins/<n>/config/routes.rb)
+[ ] Run rails plugins:boot — installs deps, rebuilds storage/build/, runs migrations
 [ ] Run rails plugins:preview[<target>] for each patched file — verify output
-[ ] Run bundle exec rspec plugins/<n>/spec/ — all tests must pass
-[ ] Run yarn vitest plugins/<n>/spec/javascript/ — all tests must pass
+[ ] Run bundle exec rspec storage/plugins/<n>/spec/ — all tests must pass
+[ ] Run yarn vitest storage/plugins/<n>/spec/javascript/ — all tests must pass
 ```
 
 ---
@@ -565,7 +632,7 @@ Files in storage/build/ (3):
 Delete the plugin folder:
 
 ```bash
-rm -rf plugins/example
+rm -rf storage/plugins/example
 ```
 
 On the next boot (or `rails plugins:rebuild`), `BuildManager.remove_orphans!` cleans
@@ -584,7 +651,7 @@ Check for typos and leading/trailing whitespace. The `containing:` match uses
 ### Patch file accidentally autoloaded
 
 The patch file must mirror the original path exactly (e.g.,
-`plugins/example/app/models/contact.rb` for `app/models/contact.rb`). `BuildManager`
+`storage/plugins/example/app/models/contact.rb` for `app/models/contact.rb`). `BuildManager`
 loads it via `load`, not Zeitwerk. If Zeitwerk tries to autoload it, ensure
 `storage/build/` is prepended to autoload paths so the composed file takes precedence.
 
@@ -596,7 +663,7 @@ file. The patch should only `include` the Concern.
 ### `storage/build/` out of sync
 
 ```bash
-rails plugins:rebuild
+rails plugins:boot
 ```
 
 ### Two plugins with the same priority on the same file
@@ -606,5 +673,5 @@ the same file.
 
 ### Plugin routes not loading
 
-Ensure the routes file is at `plugins/<name>/config/routes.rb` and contains valid
+Ensure the routes file is at `storage/plugins/<name>/config/routes.rb` and contains valid
 Rails routing DSL.

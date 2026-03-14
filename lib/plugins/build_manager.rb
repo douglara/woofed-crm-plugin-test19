@@ -63,7 +63,7 @@ module Plugins
 
     # Discover all plugin directories.
     def plugin_dirs
-      plugins_root = root.join("plugins")
+      plugins_root = root.join("storage", "plugins")
       return [] unless plugins_root.exist?
 
       plugins_root.children.select(&:directory?).sort

@@ -40,8 +40,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         end
       RUBY
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/contact.rb", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/contact.rb", <<~RUBY)
         Plugins::FilePatch.define target: "app/models/contact.rb" do
           after_line containing: "class Contact < ApplicationRecord" do
             "  include Plugins::Example::ContactExtension"
@@ -85,8 +85,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         </div>
       ERB
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/views/users/show.html.erb", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/views/users/show.html.erb", <<~RUBY)
         Plugins::FilePatch.define target: "app/views/users/show.html.erb" do
           after_line containing: '<h1 class="user-name">' do
             <<~ERB
@@ -146,8 +146,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         }
       JSX
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/javascript/pages/UserProfile.jsx", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/javascript/pages/UserProfile.jsx", <<~RUBY)
         Plugins::FilePatch.define target: "app/javascript/pages/UserProfile.jsx" do
           after_line containing: 'import Avatar from "@/components/Avatar"' do
             'import ExampleBadge from "@/components/ExampleBadge"'
@@ -188,8 +188,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         }
       CSS
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/assets/stylesheets/app.css", <<~RUBY)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/assets/stylesheets/app.css", <<~RUBY)
         Plugins::FilePatch.define target: "app/assets/stylesheets/app.css" do
           after_line containing: "--danger:  #ef4444;" do
             "  --example-color: #8b5cf6;"
@@ -235,8 +235,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         end
       RUBY
 
-      create_file("plugins/example/plugin.rb", 'name "example"')
-      create_file("plugins/example/app/models/contact_extension.rb", new_file_content)
+      create_file("storage/plugins/example/plugin.rb", 'name "example"')
+      create_file("storage/plugins/example/app/models/contact_extension.rb", new_file_content)
 
       manager.sync!
 
@@ -255,8 +255,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         export default function UserProfile() { return <div /> }
       JSX
 
-      create_file("plugins/alpha/plugin.rb", 'name "alpha"')
-      create_file("plugins/alpha/app/javascript/pages/UserProfile.jsx", <<~RUBY)
+      create_file("storage/plugins/alpha/plugin.rb", 'name "alpha"')
+      create_file("storage/plugins/alpha/app/javascript/pages/UserProfile.jsx", <<~RUBY)
         Plugins::FilePatch.define target: "app/javascript/pages/UserProfile.jsx", priority: 10 do
           after_line containing: 'import Avatar from "@/components/Avatar"' do
             'import AlphaBadge from "@/components/AlphaBadge"'
@@ -264,8 +264,8 @@ RSpec.describe "Plugin system integration", type: :integration do
         end
       RUBY
 
-      create_file("plugins/beta/plugin.rb", 'name "beta"')
-      create_file("plugins/beta/app/javascript/pages/UserProfile.jsx", <<~RUBY)
+      create_file("storage/plugins/beta/plugin.rb", 'name "beta"')
+      create_file("storage/plugins/beta/app/javascript/pages/UserProfile.jsx", <<~RUBY)
         Plugins::FilePatch.define target: "app/javascript/pages/UserProfile.jsx", priority: 20 do
           after_line containing: 'import AlphaBadge from "@/components/AlphaBadge"' do
             'import BetaBadge from "@/components/BetaBadge"'

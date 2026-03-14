@@ -7,7 +7,7 @@ RSpec.describe "User patch (favorite_contacts plugin)" do
   after  { Plugins::FilePatch.clear_registry! }
 
   it "adds the include line for UserExtension" do
-    load Rails.root.join("plugins/favorite_contacts/app/models/user.rb")
+    load Rails.root.join("storage/plugins/favorite_contacts/app/models/user.rb")
     result = Plugins::FilePatch.apply("app/models/user.rb", original)
 
     expect(result).to include("include Plugins::FavoriteContacts::UserExtension")

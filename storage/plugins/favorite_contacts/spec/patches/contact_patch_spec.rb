@@ -7,7 +7,7 @@ RSpec.describe "Contact patch (favorite_contacts plugin)" do
   after  { Plugins::FilePatch.clear_registry! }
 
   it "adds the include line for ContactExtension" do
-    load Rails.root.join("plugins/favorite_contacts/app/models/contact.rb")
+    load Rails.root.join("storage/plugins/favorite_contacts/app/models/contact.rb")
     result = Plugins::FilePatch.apply("app/models/contact.rb", original)
 
     expect(result).to include("include Plugins::FavoriteContacts::ContactExtension")
