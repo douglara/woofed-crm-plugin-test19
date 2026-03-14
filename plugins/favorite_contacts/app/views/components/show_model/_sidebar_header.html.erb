@@ -1,0 +1,11 @@
+Plugins::FilePatch.define target: "app/views/components/show_model/_sidebar_header.html.erb" do
+  before_line containing: "<div class='flex gap-2'>" do
+    <<~'ERB'
+      <% if model.is_a?(Contact) %>
+        <div class="flex items-center">
+          <%= render 'accounts/favorite_contacts/favorite_button', contact: model %>
+        </div>
+      <% end %>
+    ERB
+  end
+end

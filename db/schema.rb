@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_02_13_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_14_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -230,6 +230,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_13_000000) do
     t.index ["app_type", "app_id"], name: "index_events_on_app"
     t.index ["contact_id"], name: "index_events_on_contact_id"
     t.index ["deal_id"], name: "index_events_on_deal_id"
+  end
+
+  create_table "favorite_contacts", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "contact_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["contact_id"], name: "index_favorite_contacts_on_contact_id"
+    t.index ["user_id", "contact_id"], name: "index_favorite_contacts_on_user_id_and_contact_id", unique: true
+    t.index ["user_id"], name: "index_favorite_contacts_on_user_id"
   end
 
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -626,6 +636,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_02_13_000000) do
   add_foreign_key "deals", "contacts"
   add_foreign_key "deals", "stages"
   add_foreign_key "deals", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "favorite_contacts", "contacts"
+  add_foreign_key "favorite_contacts", "users"
   add_foreign_key "motor_alert_locks", "motor_alerts", column: "alert_id"
   add_foreign_key "motor_alerts", "motor_queries", column: "query_id"
   add_foreign_key "motor_note_tag_tags", "motor_note_tags", column: "tag_id"

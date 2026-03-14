@@ -1,0 +1,5 @@
+Plugins::FilePatch.define target: "app/views/accounts/contacts/_contact.html.erb" do
+  before_line containing: '<button id="dropdownuserBtn_' do
+    "      <%= render 'accounts/favorite_contacts/favorite_button', contact: contact %>"
+  end
+end

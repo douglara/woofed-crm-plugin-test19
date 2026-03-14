@@ -1,0 +1,20 @@
+pt-BR:
+  plugins:
+    favorite_contacts:
+      favorites: "Favoritos"
+      favorite: "Adicionar aos favoritos"
+      unfavorite: "Remover dos favoritos"
+      favorited_at: "Favoritado em"
+      no_favorites: "Nenhum contato favorito ainda"
+      no_favorites_hint: "Clique no ícone de coração em qualquer contato para adicioná-lo aos seus favoritos"
+  activerecord:
+    models:
+      favorite_contact:
+        one: "Contato Favorito"
+        other: "Contatos Favoritos"
+    errors:
+      models:
+        favorite_contact:
+          attributes:
+            contact_id:
+              already_favorited: "já está nos seus favoritos"

@@ -1,0 +1,3 @@
+<%= turbo_stream.replace dom_id(@contact, :favorite) do %>
+  <%= render 'accounts/favorite_contacts/favorite_button', contact: @contact %>
+<% end %>
