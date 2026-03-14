@@ -34,6 +34,17 @@ module WoofedCrm
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w(assets tasks))
 
+    # Plugin system: prepend storage/build/app so patched files take precedence.
+    build_app = root.join("storage", "build", "app")
+    if build_app.exist?
+      config.autoload_paths.unshift(build_app.join("models").to_s)
+      config.eager_load_paths.unshift(build_app.join("models").to_s)
+
+      config.paths["app/views"].unshift(build_app.join("views").to_s)
+      config.paths["app/controllers"].unshift(build_app.join("controllers").to_s)
+      config.paths["app/helpers"].unshift(build_app.join("helpers").to_s)
+    end
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

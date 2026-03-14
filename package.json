@@ -65,6 +65,7 @@
     "postcss-import": "^16.1.1",
     "sass-embedded": "^1.97.3",
     "vite": "^5.0.0",
-    "vite-plugin-ruby": "5.1.1"
+    "vite-plugin-ruby": "5.1.1",
+    "vitest": "^4.1.0"
   }
 }
