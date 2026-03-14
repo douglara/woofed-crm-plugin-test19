@@ -67,6 +67,21 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_14_100000) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "agent_plugin_builders", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.text "description", null: false
+    t.string "status", default: "pending", null: false
+    t.string "repo_url"
+    t.string "branch_name"
+    t.text "logs"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_plugin_builders_on_account_id"
+    t.index ["user_id"], name: "index_agent_plugin_builders_on_user_id"
+  end
+
   create_table "apps", force: :cascade do |t|
     t.string "name"
     t.string "kind"
@@ -629,6 +644,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_14_100000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agent_plugin_builders", "accounts"
+  add_foreign_key "agent_plugin_builders", "users"
   add_foreign_key "deal_assignees", "deals"
   add_foreign_key "deal_assignees", "users"
   add_foreign_key "deal_products", "deals"

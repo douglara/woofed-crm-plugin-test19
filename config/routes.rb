@@ -153,6 +153,7 @@ Rails.application.routes.draw do
         resources :users, only: [:create] do
           match 'search', on: :collection, via: %i[get post]
         end
+        resources :agent_plugin_builders, only: %i[index show create]
       end
 
       resources :contacts, only: [:create] do

@@ -11,7 +11,8 @@ RUN apt-get update -qq \
         postgresql postgresql-client \
         graphviz \
         netcat-traditional software-properties-common \
-        imagemagick libvips libvips-dev libvips-tools
+        imagemagick libvips libvips-dev libvips-tools \
+        git curl
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
     && apt-get install -y nodejs \
@@ -40,6 +41,13 @@ RUN bundle exec rake assets:precompile
 
 # Install node dependences
 RUN npm i -g flat
+
+# Install opencode CLI
+RUN curl -fsSL https://opencode.ai/install | bash
+
+# Configure git for AI feature builds
+RUN git config --global user.email "ai-builder@woofedcrm.com" \
+    && git config --global user.name "WoofedCRM AI Builder"
 
 RUN echo "Waiting for postgres to become ready...."
 RUN sleep 10
