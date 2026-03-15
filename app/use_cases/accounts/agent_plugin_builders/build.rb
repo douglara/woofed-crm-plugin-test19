@@ -36,6 +36,10 @@ class Accounts::AgentPluginBuilders::Build
     @feature_request.update(status: :completed, repo_url: repo_url)
     log("Plugin conversion completed! Plugin available at master branch.")
 
+    install_plugin_locally
+    register_plugin_in_database(repo_url)
+    trigger_app_restart
+
     { ok: @feature_request }
   rescue StandardError => e
     @feature_request.update(status: :failed, error_message: e.message)
@@ -203,11 +207,13 @@ class Accounts::AgentPluginBuilders::Build
   end
 
   def run_streaming_command(cmd, chdir:, timeout: OPENCODE_TIMEOUT)
-    output = +""
+    output = +"" # UTF-8 mutable string
     deadline = Time.current + timeout
 
     Open3.popen3(cmd, chdir: chdir) do |_stdin, stdout, stderr, wait_thread|
       _stdin.close
+      stdout.binmode
+      stderr.binmode
 
       streams = [stdout, stderr]
       until streams.empty?
@@ -222,7 +228,8 @@ class Accounts::AgentPluginBuilders::Build
 
         ready[0].each do |io|
           begin
-            chunk = io.read_nonblock(8192)
+            raw = io.read_nonblock(8192)
+            chunk = raw.encode("UTF-8", "binary", invalid: :replace, undef: :replace)
             output << chunk
             log(chunk.strip) if chunk.strip.present?
           rescue EOFError
@@ -238,6 +245,32 @@ class Accounts::AgentPluginBuilders::Build
     end
 
     output
+  end
+
+  def install_plugin_locally
+    plugin_source = File.join(@work_path, "storage", "plugins", @plugin_slug)
+    plugin_dest = Rails.root.join("storage", "plugins", @plugin_slug)
+
+    unless File.directory?(plugin_source)
+      raise "Plugin source directory not found at #{plugin_source}"
+    end
+
+    FileUtils.rm_rf(plugin_dest)
+    FileUtils.cp_r(plugin_source, plugin_dest)
+    log("Plugin files installed to #{plugin_dest}")
+  end
+
+  def register_plugin_in_database(repo_url)
+    plugin = Plugin.find_or_initialize_by(name: @plugin_slug)
+    plugin.github_url = repo_url
+    plugin.status = "active"
+    plugin.save!
+    log("Plugin registered in database (id=#{plugin.id}).")
+  end
+
+  def trigger_app_restart
+    FileUtils.touch(Rails.root.join("tmp", "restart.txt"))
+    log("App restart triggered. Plugin will be active after boot.")
   end
 
   def cleanup_work_dir

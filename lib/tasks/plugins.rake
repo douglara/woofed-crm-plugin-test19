@@ -1,39 +1,60 @@
 # frozen_string_literal: true
 
+require 'securerandom'
+
 namespace :plugins do
   desc "Install a plugin from a public GitHub repository URL"
   task :install, [:url] => :environment do |_t, args|
     url = args[:url]
     abort "Usage: rails plugins:install[https://github.com/user/repo]" if url.blank?
 
-    # Validate URL format (only allow GitHub HTTPS URLs)
     unless url.match?(%r{\Ahttps://github\.com/[\w.\-]+/[\w.\-]+(?:\.git)?\z})
       abort "Error: Only public GitHub HTTPS URLs are supported (https://github.com/user/repo)"
     end
 
-    # Extract plugin name from URL
-    plugin_name = File.basename(url, ".git")
     plugins_dir = Rails.root.join("storage", "plugins")
-    plugin_path = plugins_dir.join(plugin_name)
-
-    if plugin_path.exist?
-      abort "Error: Plugin '#{plugin_name}' is already installed at #{plugin_path}"
-    end
-
-    puts "[plugins:install] Cloning #{url} into storage/plugins/#{plugin_name}..."
     FileUtils.mkdir_p(plugins_dir)
-    unless system("git", "clone", "--depth", "1", url, plugin_path.to_s)
+
+    # Clone to a temp path so we can read the manifest for the canonical name.
+    tmp_name = "#{File.basename(url, ".git")}-tmp-#{SecureRandom.hex(4)}"
+    tmp_path = plugins_dir.join(tmp_name)
+
+    puts "[plugins:install] Cloning #{url}..."
+    unless system("git", "clone", "--depth", "1", url, tmp_path.to_s)
+      FileUtils.rm_rf(tmp_path)
       abort "Error: git clone failed. Check the URL and try again."
     end
 
-    # Validate that it's a valid plugin
-    manifest = plugin_path.join("plugin.rb")
-    unless manifest.exist?
-      FileUtils.rm_rf(plugin_path)
+    manifest_path = tmp_path.join("plugin.rb")
+    unless manifest_path.exist?
+      FileUtils.rm_rf(tmp_path)
       abort "Error: Repository does not contain a plugin.rb manifest. Removed."
     end
 
-    puts "[plugins:install] Plugin '#{plugin_name}' cloned successfully."
+    content = File.read(manifest_path)
+    plugin_name = content[/name\s+["'](.+?)["']/, 1]
+    unless plugin_name
+      FileUtils.rm_rf(tmp_path)
+      abort "Error: plugin.rb does not define a name."
+    end
+
+    if Plugin.exists?(name: plugin_name)
+      FileUtils.rm_rf(tmp_path)
+      abort "Error: Plugin '#{plugin_name}' is already registered in the database."
+    end
+
+    plugin_path = plugins_dir.join(plugin_name)
+    if plugin_path.exist?
+      FileUtils.rm_rf(tmp_path)
+      abort "Error: Directory storage/plugins/#{plugin_name} already exists."
+    end
+
+    FileUtils.mv(tmp_path.to_s, plugin_path.to_s)
+    puts "[plugins:install] Cloned to storage/plugins/#{plugin_name}"
+
+    Plugin.create!(name: plugin_name, github_url: url, status: "active")
+    puts "[plugins:install] Plugin '#{plugin_name}' registered in database."
+
     puts "[plugins:install] Running boot to activate plugin..."
     Rake::Task["plugins:boot"].invoke
 
@@ -48,13 +69,18 @@ namespace :plugins do
     name = args[:name]
     abort "Usage: rails plugins:uninstall[plugin_name]" if name.blank?
 
-    plugin_path = Rails.root.join("storage", "plugins", name)
-    unless plugin_path.exist?
-      abort "Error: Plugin '#{name}' not found in storage/plugins/"
-    end
+    plugin = Plugin.find_by(name: name)
+    abort "Error: Plugin '#{name}' not found in the database." unless plugin
 
     puts "[plugins:uninstall] Removing plugin '#{name}'..."
-    FileUtils.rm_rf(plugin_path)
+    plugin.destroy!
+    puts "[plugins:uninstall] Plugin record deleted from database."
+
+    plugin_path = Rails.root.join("storage", "plugins", name)
+    if plugin_path.exist?
+      FileUtils.rm_rf(plugin_path)
+      puts "[plugins:uninstall] Removed directory storage/plugins/#{name}"
+    end
 
     puts "[plugins:uninstall] Rebuilding without plugin..."
     Rake::Task["plugins:boot"].invoke
@@ -130,6 +156,19 @@ namespace :plugins do
     else
       puts "Files in storage/build/ (#{files.size}):"
       files.each { |f| puts "  #{f}" }
+    end
+  end
+
+  desc "List all registered plugins and their status"
+  task list: :environment do
+    plugins = Plugin.order(:name)
+    if plugins.empty?
+      puts "No plugins registered."
+    else
+      plugins.each do |p|
+        locally = p.installed_locally? ? "installed" : "MISSING locally"
+        puts "  #{p.name} [#{p.status}] #{locally} — #{p.github_url}"
+      end
     end
   end
 end

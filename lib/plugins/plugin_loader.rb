@@ -1,10 +1,17 @@
 # frozen_string_literal: true
 
 module Plugins
-  # Discovers and loads plugins from the storage/plugins/ directory.
+  # Loads plugins based on the plugins table (DB-first).
   #
-  # Each plugin has a manifest at storage/plugins/<name>/plugin.rb that defines
-  # name, version, and priority.
+  # Boot flow:
+  #   1. Read active Plugin records from the database.
+  #   2. Clone any that are missing locally (using github_url).
+  #   3. Load manifests only for plugins that are both active in DB and present on disk.
+  #   4. Sync storage/build/ via BuildManager.
+  #   5. Update version/commit_sha metadata on existing Plugin records.
+  #
+  # Plugins NOT in the database are never loaded, regardless of what exists
+  # under storage/plugins/.
   class PluginLoader
     PluginManifest = Struct.new(:name, :version, :priority, :path, keyword_init: true)
 
@@ -17,26 +24,24 @@ module Plugins
         @loaded_plugins = []
       end
 
-      # Discover and load all plugins, then sync the build.
       def load_all!(root: Rails.root)
         reset!
         newly_cloned = clone_missing_plugins!(root)
-        discover_plugins(root)
+        discover_from_database!(root)
         load_plugin_routes!(root)
         sync_build!(root)
-        sync_plugin_records!
+        update_plugin_metadata!
 
-        # Restart so the next boot registers the new plugin's migration paths
-        # and picks up any new routes/autoload paths cleanly.
+        # Restart so the next boot registers new migration paths / routes cleanly.
         schedule_restart!(root) if newly_cloned.any?
       end
 
       private
 
       # For each active Plugin record not installed locally:
-      #   - if it has a github_url, clone it before boot
-      #   - if still missing after clone (or no URL), mark as failed
-      # Returns the list of successfully cloned plugin names.
+      #   - clone from github_url (must be present)
+      #   - if clone fails or URL is blank, mark as failed
+      # Returns list of successfully cloned plugin names.
       def clone_missing_plugins!(root)
         return [] unless defined?(Plugin) && Plugin.table_exists?
 
@@ -58,7 +63,7 @@ module Plugins
           end
 
           unless plugin_record.installed_locally?
-            Rails.logger.error "[PluginLoader] Plugin '#{plugin_record.name}' not found locally — marking as failed"
+            Rails.logger.error "[PluginLoader] Plugin '#{plugin_record.name}' could not be installed locally — marking as failed"
             plugin_record.update_columns(status: "failed")
           end
         end
@@ -66,26 +71,48 @@ module Plugins
         newly_cloned
       end
 
-      def schedule_restart!(root)
-        Rails.logger.info "[PluginLoader] New plugin(s) cloned — scheduling restart to register migration paths"
-        FileUtils.touch(root.join("tmp", "restart.txt"))
+      # Build loaded_plugins from the DB: only active plugins that are installed locally.
+      # Plugins on disk but NOT in the database are ignored entirely.
+      def discover_from_database!(root)
+        return unless defined?(Plugin) && Plugin.table_exists?
+
+        Plugin.active.each do |plugin_record|
+          unless plugin_record.installed_locally?
+            Rails.logger.warn "[PluginLoader] Plugin '#{plugin_record.name}' is active in DB but missing locally — skipping"
+            next
+          end
+
+          manifest_path = plugin_record.local_path.join("plugin.rb")
+          unless manifest_path.exist?
+            Rails.logger.warn "[PluginLoader] Plugin '#{plugin_record.name}' has no plugin.rb manifest — skipping"
+            next
+          end
+
+          manifest = parse_manifest(manifest_path, plugin_record.local_path)
+          loaded_plugins << manifest if manifest
+        end
+
+        loaded_plugins.sort_by!(&:priority)
       end
 
-      # After loading, upsert Plugin records for each discovered plugin.
-      def sync_plugin_records!
+      # Update version and commit_sha on existing Plugin records from the loaded manifests.
+      # Does NOT create new records — DB is the source of truth for what is installed.
+      def update_plugin_metadata!
         return unless defined?(Plugin) && Plugin.table_exists?
 
         loaded_plugins.each do |manifest|
-          commit_sha = read_commit_sha(manifest.path)
-          Plugin.find_or_initialize_by(name: manifest.name).tap do |record|
-            record.version = manifest.version
-            record.commit_sha = commit_sha
-            record.status = "active" if record.status == "failed" || record.new_record?
-            record.save!
+          Plugin.find_by(name: manifest.name)&.tap do |record|
+            commit_sha = read_commit_sha(manifest.path)
+            record.update_columns(version: manifest.version, commit_sha: commit_sha)
           end
         rescue => e
-          Rails.logger.error "[PluginLoader] Failed to sync Plugin record for '#{manifest.name}': #{e.message}"
+          Rails.logger.error "[PluginLoader] Failed to update metadata for '#{manifest.name}': #{e.message}"
         end
+      end
+
+      def schedule_restart!(root)
+        Rails.logger.info "[PluginLoader] New plugin(s) cloned — scheduling restart to register migration paths"
+        FileUtils.touch(root.join("tmp", "restart.txt"))
       end
 
       def read_commit_sha(plugin_dir)
@@ -96,36 +123,16 @@ module Plugins
         sha.empty? ? nil : sha
       end
 
-      def discover_plugins(root)
-        plugins_dir = root.join("storage", "plugins")
-        return unless plugins_dir.exist?
-
-        plugins_dir.children.select(&:directory?).sort.each do |plugin_dir|
-          manifest_path = plugin_dir.join("plugin.rb")
-          next unless manifest_path.exist?
-
-          manifest = parse_manifest(manifest_path, plugin_dir)
-          loaded_plugins << manifest if manifest
-        end
-
-        loaded_plugins.sort_by!(&:priority)
-      end
-
       def parse_manifest(manifest_path, plugin_dir)
         content = File.read(manifest_path)
 
-        name = content[/name\s+["'](.+?)["']/, 1]
-        version = content[/version\s+["'](.+?)["']/, 1] || "0.0.0"
+        name     = content[/name\s+["'](.+?)["']/, 1]
+        version  = content[/version\s+["'](.+?)["']/, 1] || "0.0.0"
         priority = content[/priority\s+(\d+)/, 1]&.to_i || 0
 
         return nil unless name
 
-        PluginManifest.new(
-          name: name,
-          version: version,
-          priority: priority,
-          path: plugin_dir
-        )
+        PluginManifest.new(name: name, version: version, priority: priority, path: plugin_dir)
       end
 
       def load_plugin_routes!(root)

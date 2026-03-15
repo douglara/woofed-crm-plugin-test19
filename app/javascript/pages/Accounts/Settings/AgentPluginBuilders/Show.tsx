@@ -13,7 +13,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import AgentPluginBuilderShell from './AgentPluginBuilderShell'
@@ -75,6 +75,7 @@ export default function AgentPluginBuildersShow({ agent_plugin_builder: apb, cur
   const settingsUrl = `/accounts/${current_account.id}/settings`
   const logEndRef = useRef<HTMLDivElement>(null)
   const isActive = apb.status === 'pending' || apb.status === 'processing'
+  const [isRestarting, setIsRestarting] = useState(apb.status === 'completed')
 
   // Poll the show endpoint every 2s while the build is running.
   // usePoll returns { stop, start } — stop is called when isActive turns false
@@ -86,12 +87,40 @@ export default function AgentPluginBuildersShow({ agent_plugin_builder: apb, cur
     if (!isActive) stop()
   }, [isActive, stop])
 
+  // When build completes, poll /up every 2s until the app is back, then redirect
+  useEffect(() => {
+    if (!isRestarting) return
+    let cancelled = false
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/up', { cache: 'no-store' })
+        if (res.ok && !cancelled) {
+          clearInterval(interval)
+          router.visit(settingsUrl)
+        }
+      } catch {
+        // app is still restarting — keep waiting
+      }
+    }, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [isRestarting, settingsUrl])
+
+  // Transition to restarting state when build completes
+  useEffect(() => {
+    if (apb.status === 'completed') setIsRestarting(true)
+  }, [apb.status])
+
   // Auto-scroll to the bottom as new log lines arrive
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [apb.logs])
 
-  const statusConfig = STATUS_CONFIG[apb.status] ?? STATUS_CONFIG.pending
+  const statusConfig = isRestarting
+    ? { label: 'Instalando...', icon: Loader2, dot: 'bg-auxiliary-palette-blue animate-pulse', className: 'color-bg-feedback-info-default color-fg-feedback-info border color-border-feedback-info' }
+    : STATUS_CONFIG[apb.status] ?? STATUS_CONFIG.pending
   const StatusIcon = statusConfig.icon
 
   const handleDelete = async () => {
@@ -146,7 +175,7 @@ export default function AgentPluginBuildersShow({ agent_plugin_builder: apb, cur
               <StatusIcon
                 className={cn(
                   'w-3.5 h-3.5',
-                  apb.status === 'processing' && 'animate-spin',
+                  (apb.status === 'processing' || isRestarting) && 'animate-spin',
                 )}
               />
               {statusConfig.label}
@@ -238,6 +267,11 @@ export default function AgentPluginBuildersShow({ agent_plugin_builder: apb, cur
                       />
                     ))}
                     <span className="ml-0.5 text-brand-palette-03">Executando opencode...</span>
+                  </>
+                ) : isRestarting ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin text-auxiliary-palette-blue" />
+                    <span className="text-auxiliary-palette-blue">Instalando plugin... aguardando o sistema reiniciar</span>
                   </>
                 ) : apb.status === 'completed' ? (
                   <>
