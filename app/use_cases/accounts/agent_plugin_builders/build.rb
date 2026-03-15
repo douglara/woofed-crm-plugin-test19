@@ -28,13 +28,8 @@ class Accounts::AgentPluginBuilders::Build
     push_base_branch
     run_opencode
     commit_and_push
-    log("Plugin build completed! Repo: #{repo_url}")
-
-    run_opencode_convert_to_plugin
-    commit_plugin_changes
-    push_plugin_to_master
     @feature_request.update(status: :completed, repo_url: repo_url)
-    log("Plugin conversion completed! Plugin available at master branch.")
+    log("Plugin build completed! Repo: #{repo_url}")
 
     install_plugin_locally
     register_plugin_in_database(repo_url)
@@ -102,88 +97,65 @@ class Accounts::AgentPluginBuilders::Build
   end
 
   OPENCODE_TIMEOUT = 2.hours.to_i
+  OPENCODE_MODEL = "opencode/big-pickle"
 
   def run_opencode
-    log("Running OpenCode AI to develop the plugin...")
+    log("Running OpenCode AI to build the plugin (model: #{OPENCODE_MODEL})...")
     log("Description: #{@feature_request.description}")
 
-    escaped_description = Shellwords.escape(@feature_request.description)
-    cmd = "opencode run #{escaped_description}"
+    prompt = build_plugin_prompt
+    cmd = "opencode run --model #{OPENCODE_MODEL} #{Shellwords.escape(prompt)}"
 
     output = run_streaming_command(cmd, chdir: @work_path, timeout: OPENCODE_TIMEOUT)
     log("OpenCode finished.")
     log("Output: #{output.truncate(5000)}")
   end
 
-  def run_opencode_convert_to_plugin
-    log("Running OpenCode to convert implementation to plugin...")
-    log("Plugin name: #{@plugin_slug}")
-
-    prompt = build_plugin_conversion_prompt
-    cmd = "opencode run #{Shellwords.escape(prompt)}"
-
-    output = run_streaming_command(cmd, chdir: @work_path, timeout: OPENCODE_TIMEOUT)
-    log("OpenCode plugin conversion finished.")
-    log("Output: #{output.truncate(5000)}")
-  end
-
-  def build_plugin_conversion_prompt
+  def build_plugin_prompt
     plugin_guide = Rails.root.join('docs/plugins.md').read
 
     <<~PROMPT
-      Convert the implementation from the last git commit into a WoofedCRM plugin.
+      Build a WoofedCRM plugin that implements the following feature:
+
+      #{@feature_request.description}
 
       Plugin name: #{@plugin_slug}
       Plugin folder: storage/plugins/#{@plugin_slug}/
 
-      Key requirements:
+      ## How Plugins works (follow this exactly):
+      #{plugin_guide}
+
+      Requirements:
+      - Create all plugin files directly inside storage/plugins/#{@plugin_slug}/
       - Create storage/plugins/#{@plugin_slug}/plugin.rb with manifest (name: "#{@plugin_slug}", version: "1.0.0")
-      - For each file modified inside app/ by the last commit: create a FilePatch file at the same relative path inside storage/plugins/#{@plugin_slug}/app/ using the FilePatch DSL
-      - For each new file added inside app/ by the last commit: copy it as-is to storage/plugins/#{@plugin_slug}/app/ at the same relative path
+      - Do NOT modify any files inside app/ — all modifications must go through the FilePatch DSL
+      - For each existing app/ file that needs to be extended: create a FilePatch file at the same relative path inside storage/plugins/#{@plugin_slug}/app/
+      - For each new file the plugin needs: create it inside storage/plugins/#{@plugin_slug}/app/ at the appropriate relative path
       - Move any ActiveRecord macros (has_many, belongs_to, validates, scope) into ActiveSupport::Concern modules in new files inside the plugin
       - Create a full test suite under storage/plugins/#{@plugin_slug}/spec/
-      - Add routes to storage/plugins/#{@plugin_slug}/config/routes.rb if needed
+      - Add routes to storage/plugins/#{@plugin_slug}/config/routes.rb if needed — NEVER re-define routes already present in the main app; only add new plugin-specific routes
       - Add migrations to storage/plugins/#{@plugin_slug}/db/migrate/ if needed
-      - Do NOT modify any files inside app/ — all modifications must go through the FilePatch DSL
-      - After creating the plugin files, revert any direct changes made to app/ files by the last commit (they are now in the plugin)
 
-      ## Plugin Authoring Guide (follow this exactly)
-
-      #{plugin_guide}
     PROMPT
   end
 
-  def commit_plugin_changes
+  def commit_and_push
     log("Committing plugin files...")
     run_git_command("add -A")
 
-    status_output = run_git_command("status --porcelain")
-    if status_output.strip.empty?
-      raise "OpenCode did not create any plugin files in storage/plugins/#{@plugin_slug}"
+    manifest = File.join(@work_path, "storage", "plugins", @plugin_slug, "plugin.rb")
+    unless File.exist?(manifest)
+      raise "OpenCode did not create plugin.rb in storage/plugins/#{@plugin_slug}/ — plugin build failed"
     end
-
-    commit_message = "feat: add #{@plugin_slug} plugin"
-    run_git_command("commit -m #{Shellwords.escape(commit_message)}")
-    log("Plugin committed.")
-  end
-
-  def push_plugin_to_master
-    log("Pushing plugin folder to master branch...")
-    run_git_command("subtree push --prefix=storage/plugins/#{@plugin_slug} origin master")
-    log("Plugin pushed to master.")
-  end
-
-  def commit_and_push
-    log("Committing changes...")
-
-    run_git_command("add -A")
 
     status_output = run_git_command("status --porcelain")
     if status_output.strip.empty?
       raise "OpenCode did not produce any changes"
     end
 
-    commit_message = "feat: #{@feature_request.description.truncate(72)}"
+    log("Plugin files created: #{Dir[File.join(@work_path, "storage", "plugins", @plugin_slug, "**", "*")].count} file(s)")
+
+    commit_message = "feat: add #{@plugin_slug} plugin"
     run_git_command("commit -m #{Shellwords.escape(commit_message)}")
 
     log("Pushing to origin build-feature...")
@@ -255,9 +227,30 @@ class Accounts::AgentPluginBuilders::Build
       raise "Plugin source directory not found at #{plugin_source}"
     end
 
+    manifest = File.join(plugin_source, "plugin.rb")
+    unless File.exist?(manifest)
+      raise "plugin.rb not found in #{plugin_source} — OpenCode did not generate a valid plugin"
+    end
+
+    # Sanity-check: a plugin must NOT look like a full Rails app
+    rails_indicators = %w[Gemfile config.ru bin/rails app/assets/config/manifest.js]
+    rails_indicators.each do |indicator|
+      if File.exist?(File.join(plugin_source, indicator))
+        raise "Plugin directory contains '#{indicator}' — OpenCode generated a full Rails app instead of a plugin. Aborting."
+      end
+    end
+
+    files = Dir[File.join(plugin_source, "**", "*")].reject { |f| File.directory?(f) }
+    log("Installing #{files.size} plugin file(s) from work directory...")
+
+    FileUtils.mkdir_p(plugin_dest.dirname)
     FileUtils.rm_rf(plugin_dest)
-    FileUtils.cp_r(plugin_source, plugin_dest)
-    log("Plugin files installed to #{plugin_dest}")
+    FileUtils.cp_r(plugin_source, plugin_dest.to_s)
+
+    installed = Dir[File.join(plugin_dest, "**", "*")].reject { |f| File.directory?(f) }
+    raise "Plugin installation failed — destination is empty after copy" if installed.empty?
+
+    log("Plugin installed to #{plugin_dest} (#{installed.size} file(s))")
   end
 
   def register_plugin_in_database(repo_url)
