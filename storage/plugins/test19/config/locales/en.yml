@@ -1,0 +1,9 @@
+en:
+  plugins:
+    test19:
+      world_clock: "World Clock"
+      subtitle: "Current time in different cities around the world"
+      sao_paulo: "São Paulo"
+      brisbane: "Brisbane"
+      new_york: "New York"
+      last_updated: "Times update automatically in real-time"

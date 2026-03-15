@@ -1,0 +1,9 @@
+pt-BR:
+  plugins:
+    test19:
+      world_clock: "Relógio Mundial"
+      subtitle: "Horário atual em diferentes cidades do mundo"
+      sao_paulo: "São Paulo"
+      brisbane: "Brisbane"
+      new_york: "Nova York"
+      last_updated: "Os horários são atualizados automaticamente em tempo real"

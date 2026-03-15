@@ -1,0 +1,70 @@
+<div class="p-8" data-controller="world-clock">
+  <header class="mb-8">
+    <h1 class="typography-title-aa-lh150 text-dark-gray-palette-p1 flex items-center gap-3">
+      <i data-lucide="globe" class="w-7 h-7 text-brand-palette-03"></i>
+      <%= t('plugins.test19.world_clock') %>
+    </h1>
+    <p class="typography-body-r-lh150 text-dark-gray-palette-p3 mt-2">
+      <%= t('plugins.test19.subtitle') %>
+    </p>
+  </header>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-gradient-to-br from-brand-palette-08 to-brand-palette-09 border border-light-palette-p3 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 bg-brand-palette-01 rounded-full flex items-center justify-center">
+          <i data-lucide="map-pin" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h2 class="typography-title-c-lh150 text-dark-gray-palette-p1"><%= t('plugins.test19.sao_paulo') %></h2>
+          <p class="typography-body-s-lh150 text-dark-gray-palette-p4">GMT-3</p>
+        </div>
+      </div>
+      <div class="text-4xl font-bold text-dark-gray-palette-p1 font-mono" data-world-clock-target="saoPaulo">
+        <%= Time.now.in_time_zone('America/Sao_Paulo').strftime('%H:%M:%S') %>
+      </div>
+      <div class="typography-body-s-lh150 text-dark-gray-palette-p3 mt-2">
+        <%= Time.now.in_time_zone('America/Sao_Paulo').strftime('%d/%m/%Y') %>
+      </div>
+    </div>
+    <div class="bg-gradient-to-br from-brand-palette-08 to-brand-palette-09 border border-light-palette-p3 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 bg-brand-palette-02 rounded-full flex items-center justify-center">
+          <i data-lucide="map-pin" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h2 class="typography-title-c-lh150 text-dark-gray-palette-p1"><%= t('plugins.test19.brisbane') %></h2>
+          <p class="typography-body-s-lh150 text-dark-gray-palette-p4">GMT+10</p>
+        </div>
+      </div>
+      <div class="text-4xl font-bold text-dark-gray-palette-p1 font-mono" data-world-clock-target="brisbane">
+        <%= Time.now.in_time_zone('Australia/Brisbane').strftime('%H:%M:%S') %>
+      </div>
+      <div class="typography-body-s-lh150 text-dark-gray-palette-p3 mt-2">
+        <%= Time.now.in_time_zone('Australia/Brisbane').strftime('%d/%m/%Y') %>
+      </div>
+    </div>
+    <div class="bg-gradient-to-br from-brand-palette-08 to-brand-palette-09 border border-light-palette-p3 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 bg-brand-palette-03 rounded-full flex items-center justify-center">
+          <i data-lucide="map-pin" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h2 class="typography-title-c-lh150 text-dark-gray-palette-p1"><%= t('plugins.test19.new_york') %></h2>
+          <p class="typography-body-s-lh150 text-dark-gray-palette-p4">GMT-4</p>
+        </div>
+      </div>
+      <div class="text-4xl font-bold text-dark-gray-palette-p1 font-mono" data-world-clock-target="newYork">
+        <%= Time.now.in_time_zone('America/New_York').strftime('%H:%M:%S') %>
+      </div>
+      <div class="typography-body-s-lh150 text-dark-gray-palette-p3 mt-2">
+        <%= Time.now.in_time_zone('America/New_York').strftime('%d/%m/%Y') %>
+      </div>
+    </div>
+  </div>
+  <div class="mt-8 p-4 bg-light-palette-p5 border border-light-palette-p3 rounded-lg">
+    <div class="flex items-center gap-2 text-dark-gray-palette-p3">
+      <i data-lucide="info" class="w-4 h-4"></i>
+      <p class="typography-body-s-lh150"><%= t('plugins.test19.last_updated') %></p>
+    </div>
+  </div>
+</div>
