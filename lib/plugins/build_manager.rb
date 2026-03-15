@@ -61,16 +61,23 @@ module Plugins
 
     private
 
-    # Discover all plugin directories.
+    # Discover active plugin directories — DB-first.
+    # Falls back to filesystem scan if the DB is unavailable (e.g. first migration run).
     def plugin_dirs
-      plugins_root = root.join("storage", "plugins")
-      return [] unless plugins_root.exist?
+      if defined?(Plugin) && Plugin.table_exists?
+        Plugin.active.filter_map { |p| p.local_path.exist? ? p.local_path : nil }.sort
+      else
+        plugins_root = root.join("storage", "plugins")
+        return [] unless plugins_root.exist?
 
-      plugins_root.children.select(&:directory?).sort
+        plugins_root.children.select(&:directory?).sort
+      end
     end
 
-    # Load all patch files (files whose relative path matches an app/ original).
-    # This populates FilePatch.registry.
+    # Load all patch files whose relative path matches an existing app/ file and that
+    # contain FilePatch DSL. This populates FilePatch.registry.
+    # Files are detected by content (Plugins::FilePatch.define) rather than extension,
+    # so .erb patch files containing DSL are also picked up.
     def load_all_patch_files!
       plugin_dirs.each do |plugin_dir|
         plugin_app = plugin_dir.join("app")
@@ -84,6 +91,9 @@ module Plugins
 
           # Only load as patch if the original exists in app/
           next unless original.exist?
+
+          # Only load files that contain FilePatch DSL (works for .rb, .erb, etc.)
+          next unless File.read(plugin_file).include?("Plugins::FilePatch.define")
 
           load plugin_file
         end

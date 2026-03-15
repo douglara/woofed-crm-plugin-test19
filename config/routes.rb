@@ -197,8 +197,23 @@ Rails.application.routes.draw do
   get 'service-worker' => 'pwa#service_worker'
   get 'webmanifest' => 'pwa#manifest'
 
-  # Draw plugin routes
-  Dir[Rails.root.join("storage/plugins/*/config/routes.rb")].sort.each do |route_file|
-    instance_eval(File.read(route_file))
+  # Draw plugin routes — DB-first: only load routes for plugins active in the database.
+  # Falls back to directory scan if the DB is unavailable (e.g. first migration run).
+  plugin_route_files =
+    if defined?(Plugin) && Plugin.table_exists?
+      Plugin.active.filter_map do |p|
+        f = p.local_path.join("config", "routes.rb")
+        f.exist? ? f.to_s : nil
+      end.sort
+    else
+      Dir[Rails.root.join("storage/plugins/*/config/routes.rb")].sort
+    end
+
+  plugin_route_files.each do |route_file|
+    begin
+      instance_eval(File.read(route_file))
+    rescue ArgumentError => e
+      Rails.logger.error "[routes] Skipping plugin route file #{route_file}: #{e.message}"
+    end
   end
 end

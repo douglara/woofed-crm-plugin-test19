@@ -55,7 +55,7 @@ module Plugins
             plugins_dir = root.join("storage", "plugins")
             FileUtils.mkdir_p(plugins_dir)
 
-            cloned = system("git", "clone", "--depth", "1",
+            cloned = system("git", "clone", "--depth", "1", "--branch", "master",
                             plugin_record.github_url,
                             plugin_record.local_path.to_s)
 
