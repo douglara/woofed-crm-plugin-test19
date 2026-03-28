@@ -1,0 +1,4 @@
+Plugins::FilePatch.define target: "app/assets/stylesheets/application.tailwind.css" do
+  replace_line containing: "@apply odd:bg-[#5440D2]",
+               with: "    @apply odd:bg-[#14532D] odd:text-light-palette-p4 even:bg-brand-palette-03 even:text-light-palette-p4 py-1 px-1.5 flex rounded cursor-default flex gap-1.5 items-center;"
+end

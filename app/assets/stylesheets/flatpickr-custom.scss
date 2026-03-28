@@ -1,0 +1,77 @@
+Plugins::FilePatch.define target: "app/assets/stylesheets/flatpickr-custom.scss" do
+  # --- Month navigation arrows ---
+  # Line 38: 6-space indent (flatpickr-prev/next-month &:hover fill)
+  replace_line containing: "fill: #6857d9;",
+               with: "      fill: #15803d;"
+  # Line 41: 8-space indent (svg inside &:hover)
+  replace_line containing: "fill: #6857d9;",
+               with: "        fill: #15803d;"
+
+  # --- numInputWrapper span:hover (10-space indent) ---
+  replace_line containing: "background: #edf1fd;",
+               with: "          background: #dcfce7;"
+
+  # --- flatpickr-day &:hover ---
+  replace_line containing: "background: #edf1fd;",
+               with: "    background: #dcfce7;"
+  replace_line containing: "border-color: #edf1fd;",
+               with: "    border-color: #dcfce7;"
+  replace_line containing: "color: #6857d9;",
+               with: "    color: #15803d;"
+
+  # --- flatpickr-day &.today ---
+  replace_line containing: "border-color: #6857d9;",
+               with: "    border-color: #15803d;"
+  replace_line containing: "color: #6857d9;",
+               with: "    color: #15803d;"
+
+  # --- flatpickr-day &.today &:hover ---
+  replace_line containing: "background: #6857d9;",
+               with: "      background: #15803d;"
+
+  # --- flatpickr-day &.selected/startRange/endRange ---
+  replace_line containing: "background: #6857d9 !important;",
+               with: "    background: #15803d !important;"
+  replace_line containing: "border-color: #6857d9 !important;",
+               with: "    border-color: #15803d !important;"
+
+  # --- hover within selected range ---
+  replace_line containing: "background: #8686e8 !important;",
+               with: "      background: #16a34a !important;"
+  replace_line containing: "border-color: #8686e8 !important;",
+               with: "      border-color: #16a34a !important;"
+
+  # --- flatpickr-day &.inRange ---
+  replace_line containing: "background: #edf1fd;",
+               with: "    background: #dcfce7;"
+  replace_line containing: "border-color: #edf1fd;",
+               with: "    border-color: #dcfce7;"
+  replace_line containing: "color: #6857d9;",
+               with: "    color: #15803d;"
+  replace_line containing: "box-shadow: -5px 0 0 #edf1fd, 5px 0 0 #edf1fd;",
+               with: "    box-shadow: -5px 0 0 #dcfce7, 5px 0 0 #dcfce7;"
+
+  # --- flatpickr-day &.week.selected ---
+  replace_line containing: "box-shadow: -5px 0 0 #6857d9, 5px 0 0 #6857d9;",
+               with: "    box-shadow: -5px 0 0 #15803d, 5px 0 0 #15803d;"
+
+  # --- flatpickr-time numInputWrapper span:hover (8-space indent) ---
+  replace_line containing: "background: #edf1fd;",
+               with: "        background: #dcfce7;"
+
+  # --- flatpickr-am-pm &:hover (6-space indent) ---
+  replace_line containing: "background: #edf1fd;",
+               with: "      background: #dcfce7;"
+  replace_line containing: "color: #6857d9;",
+               with: "      color: #15803d;"
+
+  # --- flatpickr-input &:focus ---
+  replace_line containing: "border-color: #6857d9;",
+               with: "    border-color: #15803d;"
+  replace_line containing: "box-shadow: 0 0 0 3px rgba(104, 87, 217, 0.1);",
+               with: "    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);"
+
+  # --- flatpickr-quick-select button:focus ---
+  replace_line containing: "box-shadow: 0 0 0 2px rgba(104, 87, 217, 0.2);",
+               with: "      box-shadow: 0 0 0 2px rgba(21, 128, 61, 0.2);"
+end

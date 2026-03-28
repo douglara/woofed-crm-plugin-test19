@@ -1,0 +1,50 @@
+en:
+  plugins:
+    ai_features:
+      sidebar_label: 'AI Follow-ups'
+      details:
+        title: 'AI Score'
+        new_badge: '✨ New'
+  activerecord:
+    models:
+      deal:
+        ai_lead_score:
+          labels:
+            hot: Hot
+            warm: Warm
+            cold: Cold
+  views:
+    accounts:
+      ai_followups:
+        index:
+          title: 'Intelligent Follow-ups'
+          new_badge: '✨ New Feature'
+          subtitle: 'AI-generated automatic messages to follow up on your deals'
+          stats:
+            pending: 'Pending'
+            completed: 'Completed'
+            total: 'Total generated'
+          scheduled_title: 'Scheduled'
+          completed_title: 'Recently completed'
+          empty_title: 'No follow-ups scheduled'
+          empty_description: 'Enable Intelligent Follow-up on a deal to get started.'
+          overdue:
+            one: '%{count} day overdue'
+            other: '%{count} days overdue'
+          today: 'Today'
+          tomorrow: 'Tomorrow'
+          days_from_now: 'In %{count} days'
+      deals:
+        ai_followup:
+          title: 'Intelligent Follow-up'
+          new_badge: '✨ New Feature'
+          status_active: 'Active'
+          status_inactive: 'Inactive'
+          description_enabled: '✅ Automatic follow-ups enabled. The messages below will be sent automatically on the scheduled days.'
+          description_disabled: 'Set up AI-generated automatic follow-ups. When enabled, messages will be scheduled automatically.'
+          days_from_now:
+            one: 'In 1 day'
+            other: 'In %{count} days'
+          today: 'Today'
+          days_preview: 'In %{days} days'
+          preview_placeholder: 'AI-generated follow-up message will be configured when enabled'

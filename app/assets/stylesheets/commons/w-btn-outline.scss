@@ -1,0 +1,6 @@
+Plugins::FilePatch.define target: "app/assets/stylesheets/commons/w-btn-outline.scss" do
+  replace_line containing: "color: #6857D9;",
+               with: "  color: #15803D;"
+  replace_line containing: "border: 1.5px solid #D9DEFF;",
+               with: "  border: 1.5px solid #BBF7D0;"
+end

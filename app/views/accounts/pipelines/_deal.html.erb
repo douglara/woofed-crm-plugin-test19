@@ -1,0 +1,14 @@
+Plugins::FilePatch.define target: "app/views/accounts/pipelines/_deal.html.erb" do
+  before_line containing: '<div class="w-full border-[0.5px] color-border-default"></div>' do
+    <<~ERB
+              <div class="flex items-center gap-1 mt-0.5 mb-1">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold <%= deal.ai_lead_score_badge_classes %>">
+                  <span>&#9889;</span>
+                  <span>Score <%= deal.ai_lead_score %></span>
+                  <span class="opacity-70">· <%= deal.ai_lead_score_label_text %></span>
+                </span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-palette-03 text-white leading-none">&#10024; IA</span>
+              </div>
+    ERB
+  end
+end

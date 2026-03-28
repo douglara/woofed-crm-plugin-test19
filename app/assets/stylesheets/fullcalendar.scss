@@ -1,0 +1,16 @@
+Plugins::FilePatch.define target: "app/assets/stylesheets/fullcalendar.scss" do
+  replace_line containing: "--fc-button-hover-text-color: #6857D9;",
+               with: "  --fc-button-hover-text-color: #15803D;"
+  replace_line containing: "--fc-button-hover-bg-color: #F6F8FE;",
+               with: "  --fc-button-hover-bg-color: #F0FDF4;"
+  replace_line containing: "--fc-button-hover-border-color: #D9DEFF;",
+               with: "  --fc-button-hover-border-color: #BBF7D0;"
+  replace_line containing: "--fc-button-active-text-color: #6857D9;",
+               with: "  --fc-button-active-text-color: #15803D;"
+  replace_line containing: "--fc-button-active-bg-color: #F6F8FE;",
+               with: "  --fc-button-active-bg-color: #F0FDF4;"
+  replace_line containing: "--fc-button-active-border-color: #D9DEFF;",
+               with: "  --fc-button-active-border-color: #BBF7D0;"
+  replace_line containing: "--fc-today-bg-color: #F6F8FE;",
+               with: "  --fc-today-bg-color: #F0FDF4;"
+end

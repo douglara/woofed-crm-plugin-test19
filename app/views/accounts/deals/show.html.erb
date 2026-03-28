@@ -1,0 +1,9 @@
+Plugins::FilePatch.define target: "app/views/accounts/deals/show.html.erb" do
+  before_line containing: "render '/accounts/deals/events', deal: @deal" do
+    <<~ERB
+              <div class="mt-8">
+                <%= render 'accounts/deals/ai_followup', deal: @deal %>
+              </div>
+    ERB
+  end
+end

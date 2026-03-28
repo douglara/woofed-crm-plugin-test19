@@ -1,0 +1,50 @@
+pt-BR:
+  plugins:
+    ai_features:
+      sidebar_label: 'Follow-ups IA'
+      details:
+        title: 'Score IA'
+        new_badge: '✨ Novo'
+  activerecord:
+    models:
+      deal:
+        ai_lead_score:
+          labels:
+            hot: Quente
+            warm: Morno
+            cold: Frio
+  views:
+    accounts:
+      ai_followups:
+        index:
+          title: 'Follow-ups Inteligentes'
+          new_badge: '✨ Nova Função'
+          subtitle: 'Mensagens automáticas geradas por IA para acompanhar seus negócios'
+          stats:
+            pending: 'Pendentes'
+            completed: 'Concluídos'
+            total: 'Total gerados'
+          scheduled_title: 'Agendados'
+          completed_title: 'Concluídos recentes'
+          empty_title: 'Nenhum follow-up agendado'
+          empty_description: 'Ative o Follow-up Inteligente em um negócio para começar.'
+          overdue:
+            one: '%{count} dia atrasado'
+            other: '%{count} dias atrasados'
+          today: 'Hoje'
+          tomorrow: "Amanhã"
+          days_from_now: 'Daqui %{count} dias'
+      deals:
+        ai_followup:
+          title: 'Follow-up Inteligente'
+          new_badge: '✨ Nova Função'
+          status_active: 'Ativo'
+          status_inactive: 'Inativo'
+          description_enabled: '✅ Follow-ups automáticos ativados. As mensagens abaixo serão enviadas automaticamente nos dias programados.'
+          description_disabled: 'Configure follow-ups automáticos gerados por IA. Quando ativado, as mensagens serão agendadas automaticamente.'
+          days_from_now:
+            one: 'Daqui 1 dia'
+            other: 'Daqui %{count} dias'
+          today: 'Hoje'
+          days_preview: 'Daqui %{days} dias'
+          preview_placeholder: "Mensagem de follow-up gerada por IA será configurada ao ativar"

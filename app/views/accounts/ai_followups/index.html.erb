@@ -1,0 +1,157 @@
+<div class="p-8" data-controller="load-lucid-icons load-flowbite">
+
+  <%# Header %>
+  <div class="flex items-center gap-3 mb-8">
+    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-palette-03">
+      <i data-lucide="brain-circuit" class="w-5 h-5 text-white"></i>
+    </div>
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="typography-sub-title-1000 color-fg-hard"><%= t('views.accounts.ai_followups.index.title') %></h1>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-palette-03 text-white tracking-wide"><%= t('views.accounts.ai_followups.index.new_badge') %></span>
+      </div>
+      <p class="typography-body-900 color-fg-soft mt-0.5"><%= t('views.accounts.ai_followups.index.subtitle') %></p>
+    </div>
+  </div>
+
+  <%# Stats cards %>
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+    <div class="color-bg-fill-default border color-border-default rounded-xl p-4">
+      <p class="typography-body-800 color-fg-soft mb-1"><%= t('views.accounts.ai_followups.index.stats.pending') %></p>
+      <p class="text-2xl font-bold text-brand-palette-03"><%= @total_pending %></p>
+    </div>
+    <div class="color-bg-fill-default border color-border-default rounded-xl p-4">
+      <p class="typography-body-800 color-fg-soft mb-1"><%= t('views.accounts.ai_followups.index.stats.completed') %></p>
+      <p class="text-2xl font-bold text-auxiliary-palette-green"><%= @total_done %></p>
+    </div>
+    <div class="color-bg-fill-default border color-border-default rounded-xl p-4 col-span-2 sm:col-span-1">
+      <p class="typography-body-800 color-fg-soft mb-1"><%= t('views.accounts.ai_followups.index.stats.total') %></p>
+      <p class="text-2xl font-bold color-fg-hard"><%= @total_pending + @total_done %></p>
+    </div>
+  </div>
+
+  <%# Pending follow-ups %>
+  <div class="mb-8">
+    <h2 class="typography-sub-title-800 color-fg-hard mb-4 flex items-center gap-2">
+      <i data-lucide="clock" class="w-4 h-4 text-brand-palette-03"></i>
+      <%= t('views.accounts.ai_followups.index.scheduled_title') %>
+      <% if @total_pending > 0 %>
+        <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-brand-palette-03 text-white"><%= @total_pending %></span>
+      <% end %>
+    </h2>
+
+    <% if @pending_events.any? %>
+      <div class="space-y-3">
+        <% @pending_events.each do |event| %>
+          <% days_from_now = event.scheduled_at.present? ? ((event.scheduled_at.to_date - Date.today).to_i) : nil %>
+          <div class="color-bg-fill-default border color-border-default rounded-xl p-4 flex items-start gap-4 hover:color-bg-fill-hard transition-colors">
+            <%# Timeline indicator %>
+            <div class="flex-shrink-0 flex flex-col items-center gap-1 pt-0.5">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center
+                <%= days_from_now && days_from_now < 0 ? 'bg-auxiliary-palette-red-down border border-auxiliary-palette-red' : 'bg-brand-palette-07 border border-brand-palette-05' %>
+              ">
+                <i data-lucide="<%= days_from_now && days_from_now < 0 ? 'alert-circle' : 'send' %>"
+                   class="w-4 h-4 <%= days_from_now && days_from_now < 0 ? 'text-auxiliary-palette-red' : 'text-brand-palette-03' %>"></i>
+              </div>
+            </div>
+
+            <%# Content %>
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <% if days_from_now %>
+                  <% label_classes = days_from_now < 0 ? 'bg-auxiliary-palette-red-down text-auxiliary-palette-red' : 'bg-brand-palette-07 text-brand-palette-03' %>
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full <%= label_classes %>">
+                    <% if days_from_now < 0 %>
+                      <%= t('views.accounts.ai_followups.index.overdue', count: days_from_now.abs) %>
+                    <% elsif days_from_now == 0 %>
+                      <%= t('views.accounts.ai_followups.index.today') %>
+                    <% elsif days_from_now == 1 %>
+                      <%= t('views.accounts.ai_followups.index.tomorrow') %>
+                    <% else %>
+                      <%= t('views.accounts.ai_followups.index.days_from_now', count: days_from_now) %>
+                    <% end %>
+                  </span>
+                <% end %>
+                <span class="typography-body-800 text-xs color-fg-soft">
+                  <%= event.scheduled_at&.strftime('%d/%m/%Y às %H:%M') %>
+                </span>
+              </div>
+
+              <p class="typography-sub-title-800 color-fg-hard truncate mb-1">
+                <%= event.title %>
+              </p>
+
+              <div class="flex items-center gap-3 flex-wrap">
+                <%= link_to account_contact_path(Current.account, event.contact), class: "flex items-center gap-1 color-fg-soft hover:color-fg-highlight transition-colors", data: { turbo_frame: :drawer } do %>
+                  <i data-lucide="contact" class="w-3.5 h-3.5 shrink-0"></i>
+                  <span class="text-xs truncate"><%= event.contact.full_name %></span>
+                <% end %>
+
+                <% if event.deal %>
+                  <span class="color-fg-extra-soft text-xs">·</span>
+                  <%= link_to account_deal_path(Current.account, event.deal), class: "flex items-center gap-1 color-fg-soft hover:color-fg-highlight transition-colors", data: { turbo_frame: :_top } do %>
+                    <i data-lucide="briefcase" class="w-3.5 h-3.5 shrink-0"></i>
+                    <span class="text-xs truncate"><%= event.deal.name %></span>
+                  <% end %>
+                  <% if event.deal.stage %>
+                    <span class="text-xs px-1.5 py-0.5 rounded color-bg-fill-hard color-fg-soft"><%= event.deal.stage.name %></span>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+
+            <%# Action %>
+            <div class="flex-shrink-0">
+              <% if event.deal %>
+                <%= link_to account_deal_path(Current.account, event.deal), class: "button-default-blank-secondary-icon-only-sm", title: "Ver negócio", data: { turbo_frame: :_top } do %>
+                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="color-bg-fill-default border color-border-default rounded-xl p-10 text-center">
+        <div class="flex justify-center mb-3">
+          <div class="w-12 h-12 rounded-full bg-brand-palette-07 border border-brand-palette-06 flex items-center justify-center">
+            <i data-lucide="brain-circuit" class="w-6 h-6 text-brand-palette-03"></i>
+          </div>
+        </div>
+        <p class="typography-sub-title-800 color-fg-hard mb-1"><%= t('views.accounts.ai_followups.index.empty_title') %></p>
+        <p class="typography-body-800 color-fg-soft text-sm"><%= t('views.accounts.ai_followups.index.empty_description') %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <%# Done follow-ups %>
+  <% if @done_events.any? %>
+    <div>
+      <h2 class="typography-sub-title-800 color-fg-hard mb-4 flex items-center gap-2">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-auxiliary-palette-green"></i>
+        <%= t('views.accounts.ai_followups.index.completed_title') %>
+      </h2>
+      <div class="space-y-2">
+        <% @done_events.each do |event| %>
+          <div class="color-bg-fill-default border color-border-default rounded-xl px-4 py-3 flex items-center gap-3 opacity-60">
+            <div class="w-7 h-7 rounded-full bg-auxiliary-palette-green-down border border-auxiliary-palette-green flex items-center justify-center flex-shrink-0">
+              <i data-lucide="check" class="w-3.5 h-3.5 text-auxiliary-palette-green"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="typography-body-800 color-fg-hard truncate text-sm"><%= event.title %></p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-xs color-fg-soft"><%= event.contact.full_name %></span>
+                <% if event.deal %>
+                  <span class="text-xs color-fg-extra-soft">·</span>
+                  <span class="text-xs color-fg-soft"><%= event.deal.name %></span>
+                <% end %>
+              </div>
+            </div>
+            <span class="text-xs color-fg-extra-soft flex-shrink-0"><%= event.done_at&.strftime('%d/%m/%Y') %></span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+</div>

@@ -1,0 +1,50 @@
+es:
+  plugins:
+    ai_features:
+      sidebar_label: 'Follow-ups IA'
+      details:
+        title: 'Score IA'
+        new_badge: '✨ Nuevo'
+  activerecord:
+    models:
+      deal:
+        ai_lead_score:
+          labels:
+            hot: Caliente
+            warm: Tibio
+            cold: "Frío"
+  views:
+    accounts:
+      ai_followups:
+        index:
+          title: 'Follow-ups Inteligentes'
+          new_badge: '✨ Nueva Función'
+          subtitle: 'Mensajes automáticos generados por IA para dar seguimiento a tus negocios'
+          stats:
+            pending: 'Pendientes'
+            completed: 'Completados'
+            total: 'Total generados'
+          scheduled_title: 'Programados'
+          completed_title: 'Completados recientes'
+          empty_title: "Ningún follow-up programado"
+          empty_description: 'Activa el Follow-up Inteligente en un negocio para comenzar.'
+          overdue:
+            one: '%{count} día atrasado'
+            other: '%{count} días atrasados'
+          today: 'Hoy'
+          tomorrow: "Mañana"
+          days_from_now: 'En %{count} días'
+      deals:
+        ai_followup:
+          title: 'Follow-up Inteligente'
+          new_badge: '✨ Nueva Función'
+          status_active: 'Activo'
+          status_inactive: 'Inactivo'
+          description_enabled: '✅ Follow-ups automáticos activados. Los mensajes a continuación se enviarán automáticamente en los días programados.'
+          description_disabled: 'Configure follow-ups automáticos generados por IA. Cuando esté activado, los mensajes se programarán automáticamente.'
+          days_from_now:
+            one: 'En 1 día'
+            other: 'En %{count} días'
+          today: 'Hoy'
+          days_preview: 'En %{days} días'
+          preview_placeholder: 'El mensaje de follow-up generado por IA se configurará al activar'

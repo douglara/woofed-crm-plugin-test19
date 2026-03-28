@@ -1,0 +1,3 @@
+<%= turbo_stream.replace "ai-followup-#{@deal.id}" do %>
+  <%= render 'accounts/deals/ai_followup', deal: @deal %>
+<% end %>

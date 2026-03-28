@@ -1,0 +1,22 @@
+Plugins::FilePatch.define target: "app/views/accounts/deals/_details.html.erb" do
+  before_line containing: 'class="bg-light-palette-p5 min-[1400px]:rounded-t-md border-2 border-light-palette-p3 px-4"' do
+    <<~ERB
+          <div class="mx-0 mb-2 rounded-lg border-2 border-brand-palette-06 bg-brand-palette-07 px-4 py-3" data-controller="load-lucid-icons">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="brain-circuit" class="w-4 h-4 text-brand-palette-03"></i>
+                <span class="typography-body-900 text-brand-palette-02 font-semibold"><%= t('plugins.ai_features.details.title') %></span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-palette-03 text-white leading-none"><%= t('plugins.ai_features.details.new_badge') %></span>
+              </div>
+              <div class="flex items-center gap-1.5 px-3 py-1 rounded-full <%= @deal.ai_lead_score_badge_classes %>">
+                <span class="font-bold text-sm"><%= @deal.ai_lead_score %>/100</span>
+                <span class="text-xs opacity-75">· <%= @deal.ai_lead_score_label_text %></span>
+              </div>
+            </div>
+            <div class="mt-2.5 w-full bg-brand-palette-06 rounded-full h-1.5">
+              <div class="h-1.5 rounded-full bg-brand-palette-03 transition-all duration-500" style="width: <%= @deal.ai_lead_score %>%"></div>
+            </div>
+          </div>
+    ERB
+  end
+end
